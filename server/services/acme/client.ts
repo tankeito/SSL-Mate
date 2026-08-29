@@ -158,6 +158,7 @@ export class AcmeService {
       csr: certificateCsr,
       email: safeEmail,
       termsOfServiceAgreed: true,
+      skipChallengeVerification: true,
       challengePriority: ['dns-01'],
       challengeCreateFn: async (authz, challenge, keyAuthorization) => {
         if (challenge.type === 'dns-01') {

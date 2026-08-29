@@ -21,13 +21,21 @@ import { api } from './api/client';
 
 export const App: React.FC = () => {
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<NavTab>('overview');
+  const [activeTab, setActiveTab] = useState<NavTab>(() => {
+    const saved = localStorage.getItem('sslmate_active_tab') as NavTab;
+    return saved || 'tasks';
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('sslmate_dark_mode');
     return saved !== null ? saved === 'true' : true;
   });
+
+  const handleSelectTab = (tab: NavTab) => {
+    setActiveTab(tab);
+    localStorage.setItem('sslmate_active_tab', tab);
+  };
 
   // Modals state
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -104,7 +112,7 @@ export const App: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSelectTab}
           collapsed={collapsed}
           setCollapsed={setCollapsed}
           mobileOpen={mobileMenuOpen}
