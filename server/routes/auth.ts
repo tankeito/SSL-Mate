@@ -4,6 +4,9 @@ import { db } from '../db/database.js';
 import { verifyPassword, hashPassword, generateToken, requireAuth, AuthenticatedRequest } from '../services/auth.js';
 import { buildSSOAuthorizationUrl, exchangeCodeForTokens, fetchUserInfo, provisionSSOUser, generatePKCE } from '../services/sso.js';
 
+import { verifyTotpToken } from '../services/totp.js';
+import { decrypt } from '../services/crypto.js';
+
 const router = Router();
 
 // Store PKCE verifiers in memory for state correlation
@@ -20,10 +23,10 @@ setInterval(() => {
 }, 600000);
 
 /**
- * Local Admin Login (Break-Glass / 灾备应急登录)
+ * Local Admin Login (Break-Glass / 灾备应急登录，支持 TOTP 2FA)
  */
 router.post('/login', (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { username, password, totpCode } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ error: '请输入用户名和密码' });
@@ -40,6 +43,24 @@ router.post('/login', (req: Request, res: Response) => {
 
   if (!verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ error: '用户名或密码错误' });
+  }
+
+  // Check if user has 2FA enabled
+  if (user.twoFactorEnabled && user.twoFactorSecret) {
+    if (!totpCode) {
+      return res.json({
+        requiresTwoFactor: true,
+        userId: user.id,
+        username: user.username,
+        message: '该账号已开启双因素身份验证 (2FA)，请输入身份验证器 6 位动态验证码'
+      });
+    }
+
+    const plainSecret = decrypt(user.twoFactorSecret);
+    const isTotpValid = verifyTotpToken(plainSecret, String(totpCode));
+    if (!isTotpValid) {
+      return res.status(401).json({ error: '2FA 双因素动态验证码错误或已过期，请重新输入' });
+    }
   }
 
   user.lastLoginAt = new Date().toISOString();

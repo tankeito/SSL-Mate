@@ -11,6 +11,8 @@ export interface User {
   role: Role;
   avatarUrl?: string;
   isActive: boolean;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string; // Encrypted in storage
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -169,6 +171,7 @@ export interface DomainMonitor {
   id: string;
   domain: string;
   port: number;
+  remark?: string;
   status: 'healthy' | 'warning' | 'expired' | 'unreachable';
   issuer?: string;
   expiresAt?: string;

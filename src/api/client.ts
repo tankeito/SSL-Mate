@@ -54,6 +54,9 @@ export const api = {
   createUser: (data: any) => request('/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id: string, data: any) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUser: (id: string) => request(`/users/${id}`, { method: 'DELETE' }),
+  setup2FA: (userId: string) => request<{ secret: string; otpauthUrl: string; email: string }>(`/users/${userId}/2fa/setup`, { method: 'POST' }),
+  verify2FA: (userId: string, data: { secret: string; code: string }) => request<{ success: boolean; message: string }>(`/users/${userId}/2fa/verify`, { method: 'POST', body: JSON.stringify(data) }),
+  disable2FA: (userId: string) => request<{ success: boolean; message: string }>(`/users/${userId}/2fa/disable`, { method: 'POST' }),
 
   // Tasks
   getTasks: () => request<any[]>('/tasks'),
@@ -85,7 +88,9 @@ export const api = {
 
   // Monitors
   getMonitors: () => request<any[]>('/monitors'),
-  createMonitor: (data: any) => request('/monitors', { method: 'POST', body: JSON.stringify(data) }),
+  createMonitor: (data: { domain: string; port?: number; remark?: string }) => request('/monitors', { method: 'POST', body: JSON.stringify(data) }),
+  createBatchMonitors: (items: Array<{ domain: string; port?: number; remark?: string }>) => request<{ totalAdded: number; duplicatesSkipped: number; monitors: any[] }>('/monitors/batch', { method: 'POST', body: JSON.stringify({ items }) }),
+  updateMonitor: (id: string, data: { port?: number; remark?: string }) => request(`/monitors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   checkMonitor: (id: string) => request(`/monitors/${id}/check`, { method: 'POST' }),
   deleteMonitor: (id: string) => request(`/monitors/${id}`, { method: 'DELETE' }),
 

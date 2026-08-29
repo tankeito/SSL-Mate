@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Key, Lock, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { ShieldCheck, Key, Lock, ArrowRight, AlertCircle, Smartphone, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const LoginView: React.FC = () => {
@@ -7,6 +7,8 @@ export const LoginView: React.FC = () => {
   const [showLocalLogin, setShowLocalLogin] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,10 +18,15 @@ export const LoginView: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await loginLocal(username.trim(), password);
+      const res: any = await loginLocal(username.trim(), password, totpCode ? totpCode.trim() : undefined);
+      if (res && res.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setLoading(false);
+        return;
+      }
       window.location.href = '/';
     } catch (err: any) {
-      setError(err.message || '用户名或密码错误');
+      setError(err.message || '用户名、密码或 2FA 动态码错误');
     } finally {
       setLoading(false);
     }
@@ -31,7 +38,7 @@ export const LoginView: React.FC = () => {
     try {
       await loginSSO();
     } catch (err: any) {
-      setError(err.message || '连接 AuthMate SSO 失败。若在本地开发，请确保已在 AuthMate 目录启动后端服务 (npm run dev:api)');
+      setError(err.message || '连接 AuthMate SSO 失败。若在本地开发，请确保已启动 AuthMate 服务');
       setSsoLoading(false);
     }
   };
@@ -60,30 +67,34 @@ export const LoginView: React.FC = () => {
         )}
 
         {/* Primary Auth: AuthMate SSO Button */}
-        <div className="space-y-3">
-          <button
-            onClick={handleSsoClick}
-            disabled={ssoLoading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-xl shadow-emerald-950/40 transition-all active:scale-[0.98] disabled:opacity-50"
-          >
-            <Key className="w-4 h-4" />
-            <span>{ssoLoading ? '正在连接 AuthMate IdP...' : '使用 AuthMate 账号一键登录'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <p className="text-[11px] text-center text-slate-500">
-            基于 OIDC + PKCE S256 标准单点登录协议
-          </p>
-        </div>
+        {!requiresTwoFactor && (
+          <div className="space-y-3">
+            <button
+              onClick={handleSsoClick}
+              disabled={ssoLoading}
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-xl shadow-emerald-950/40 transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              <Key className="w-4 h-4" />
+              <span>{ssoLoading ? '正在连接 AuthMate IdP...' : '使用 AuthMate 账号一键登录'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <p className="text-[11px] text-center text-slate-500">
+              基于 OIDC + PKCE S256 标准单点登录协议
+            </p>
+          </div>
+        )}
 
         {/* Divider */}
-        <div className="relative flex items-center justify-center">
-          <div className="border-t border-slate-800 w-full"></div>
-          <span className="bg-slate-900 px-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-            或
-          </span>
-        </div>
+        {!requiresTwoFactor && (
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-slate-800 w-full"></div>
+            <span className="bg-slate-900 px-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+              或
+            </span>
+          </div>
+        )}
 
-        {/* Dual-Track: Local Break-glass Emergency Login */}
+        {/* Dual-Track: Local Break-glass Emergency Login / 2FA Verification */}
         <div className="space-y-3">
           {!showLocalLogin ? (
             <button
@@ -93,7 +104,59 @@ export const LoginView: React.FC = () => {
               <Lock className="w-3.5 h-3.5 text-slate-400" />
               <span>使用本地灾备管理员登录 (Break-Glass)</span>
             </button>
+          ) : requiresTwoFactor ? (
+            /* Step 2: 2FA Verification Form */
+            <form onSubmit={handleLocalSubmit} className="space-y-4 text-xs animate-in fade-in duration-200">
+              <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs flex items-start gap-2.5">
+                <Smartphone className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
+                <div>
+                  <div className="font-bold text-emerald-200 mb-0.5">安全双因素认证 (2FA)</div>
+                  <div className="text-[11px] text-emerald-300/80 leading-relaxed">
+                    已检测到该账号启用了 2FA 保护。请打开手机身份验证器应用 (Google Authenticator / 1Password) 并输入 6 位动态验证码。
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1.5 flex items-center justify-between">
+                  <span>6 位动态身份验证码</span>
+                  <span className="text-[10px] text-slate-500 font-normal">30秒刷新一次</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="例如: 123456"
+                  required
+                  autoFocus
+                  className="w-full text-center tracking-[0.5em] text-lg font-mono px-3.5 py-3 rounded-xl bg-slate-950 border border-emerald-500/50 text-emerald-400 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRequiresTwoFactor(false);
+                    setTotpCode('');
+                  }}
+                  className="w-1/3 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 bg-slate-800/40 text-xs font-semibold flex items-center justify-center gap-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>返回</span>
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || totpCode.length !== 6}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? '验证中...' : '确认并登录'}
+                </button>
+              </div>
+            </form>
           ) : (
+            /* Step 1: Username & Password Form */
             <form onSubmit={handleLocalSubmit} className="space-y-3.5 text-xs animate-in fade-in duration-200">
               <div>
                 <label className="block text-slate-400 font-bold mb-1">管理员邮箱 / 用户名</label>

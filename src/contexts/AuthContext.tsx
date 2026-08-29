@@ -5,7 +5,7 @@ import { api } from '../api/client';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  loginLocal: (username: string, password: string) => Promise<void>;
+  loginLocal: (username: string, password: string, totpCode?: string) => Promise<{ requiresTwoFactor?: boolean; message?: string } | void>;
   loginSSO: () => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -41,10 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
   }, []);
 
-  const loginLocal = async (username: string, password: string) => {
-    const res = await api.login({ username, password });
+  const loginLocal = async (username: string, password: string, totpCode?: string) => {
+    const res = await api.login({ username, password, totpCode });
+    if (res.requiresTwoFactor) {
+      return res;
+    }
     localStorage.setItem('sslmate_token', res.token);
     setUser(res.user);
+    return res;
   };
 
   const loginSSO = async () => {
