@@ -48,7 +48,22 @@ export class CloudflareDnsSolver {
     const zoneId = await this.getZoneId(domain);
     const recordName = `_acme-challenge.${domain.replace(/^\*\./, '')}`;
 
-    // Create TXT record
+    // Clean up any stale records for the same challenge first
+    try {
+      const listUrl = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?type=TXT&name=${recordName}`;
+      const listRes = await fetch(listUrl, { headers: this.getHeaders() });
+      if (listRes.ok) {
+        const listData = await listRes.json() as any;
+        if (listData.result && listData.result.length > 0) {
+          for (const rec of listData.result) {
+            const delUrl = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records/${rec.id}`;
+            await fetch(delUrl, { method: 'DELETE', headers: this.getHeaders() });
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Create TXT record (ttl: 1 = Automatic in Cloudflare, fastest propagation)
     const url = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
     const res = await fetch(url, {
       method: 'POST',
@@ -57,7 +72,7 @@ export class CloudflareDnsSolver {
         type: 'TXT',
         name: recordName,
         content: value,
-        ttl: 120
+        ttl: 1
       })
     });
 

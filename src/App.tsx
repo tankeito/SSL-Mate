@@ -12,11 +12,12 @@ import { MonitorsView } from './components/monitors/MonitorsView';
 import { NotifyView } from './components/notify/NotifyView';
 import { UsersView } from './components/users/UsersView';
 import { SettingsView } from './components/settings/SettingsView';
-import { LiveTerminalModal } from './components/logs/LiveTerminalModal';
+import { TaskExecutionModal } from './components/tasks/TaskExecutionModal';
 import { LoginView } from './components/auth/LoginView';
 import { OAuthCallback } from './components/auth/OAuthCallback';
 import { Footer } from './components/layout/Footer';
 import { CertTask } from './types';
+import { api } from './api/client';
 
 export const App: React.FC = () => {
   const { user, loading } = useAuth();
@@ -32,7 +33,7 @@ export const App: React.FC = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CertTask | null>(null);
   
-  // Terminal Modal state
+  // Terminal / Execution Modal state
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalTaskId, setTerminalTaskId] = useState('');
   const [terminalTaskName, setTerminalTaskName] = useState('');
@@ -47,9 +48,8 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // Handle OAuth Callback Route
-  const pathname = window.location.pathname;
-  if (pathname.startsWith('/oauth/callback')) {
+  // Handle OAuth Callback route
+  if (window.location.pathname === '/oauth/callback') {
     return <OAuthCallback />;
   }
 
@@ -80,6 +80,14 @@ export const App: React.FC = () => {
     setTerminalTaskId(taskId);
     setTerminalTaskName(taskName);
     setTerminalOpen(true);
+  };
+
+  const handleRetryTask = async (taskId: string) => {
+    try {
+      await api.runTask(taskId);
+    } catch (err) {
+      console.error('Failed to retry task:', err);
+    }
   };
 
   return (
@@ -172,12 +180,16 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* Live SSE Terminal Log Modal */}
-      <LiveTerminalModal
+      {/* Modern Dynamic Pipeline Execution Pop Modal */}
+      <TaskExecutionModal
         isOpen={terminalOpen}
         onClose={() => setTerminalOpen(false)}
         taskId={terminalTaskId}
         taskName={terminalTaskName}
+        onNavigateToCerts={() => {
+          setActiveTab('certs');
+        }}
+        onRetryTask={handleRetryTask}
       />
     </div>
   );

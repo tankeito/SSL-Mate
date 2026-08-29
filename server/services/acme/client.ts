@@ -162,11 +162,40 @@ export class AcmeService {
       challengeCreateFn: async (authz, challenge, keyAuthorization) => {
         if (challenge.type === 'dns-01') {
           const domain = authz.identifier.value;
-          logger.info(`[DNS-01] 正在向 DNS 提供商添加 TXT 记录: _acme-challenge.${domain} -> ${keyAuthorization}`, 'DNS');
+          const recordName = `_acme-challenge.${domain.replace(/^\*\./, '')}`;
+          logger.info(`[DNS-01] 正在向 DNS 提供商添加 TXT 记录: ${recordName} -> ${keyAuthorization}`, 'DNS');
           await dnsSolver.setRecord(domain, challenge.token, keyAuthorization);
-          logger.success(`[DNS-01] TXT 记录添加完成，等待 DNS 全网生效 (15s)...`, 'DNS');
-          // Wait 15 seconds for DNS propagation
-          await new Promise(r => setTimeout(r, 15000));
+          logger.success(`[DNS-01] TXT 记录写入成功，开始执行全球权威 DNS 广播预检...`, 'DNS');
+
+          // Active Pre-flight poll via Cloudflare DoH (up to 60s)
+          let preflightOk = false;
+          for (let attempt = 1; attempt <= 12; attempt++) {
+            logger.info(`[DNS-01] 正在轮询全球 DNS 节点 (第 ${attempt}/12 次检测，每次间隔 5s)...`, 'DNS');
+            try {
+              const dohRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(recordName)}&type=TXT`, {
+                headers: { 'Accept': 'application/dns-json' }
+              });
+              if (dohRes.ok) {
+                const dohData = await dohRes.json() as any;
+                const answers = dohData.Answer || [];
+                const found = answers.some((a: any) => a.data && a.data.includes(keyAuthorization));
+                if (found) {
+                  logger.success(`[DNS-01] ✅ 全球权威 DNS 预检通过！已成功探测到 TXT 挑战记录`, 'DNS');
+                  preflightOk = true;
+                  break;
+                }
+              }
+            } catch (_) {}
+            await new Promise(r => setTimeout(r, 5000));
+          }
+
+          if (!preflightOk) {
+            logger.warn(`[DNS-01] 全球 DNS 节点同步较慢，追加 10 秒安全缓冲后提交 ACME CA 校验...`, 'DNS');
+            await new Promise(r => setTimeout(r, 10000));
+          } else {
+            // Buffer for Let's Encrypt multi-perspective validation
+            await new Promise(r => setTimeout(r, 5000));
+          }
         }
       },
       challengeRemoveFn: async (authz, challenge, keyAuthorization) => {
