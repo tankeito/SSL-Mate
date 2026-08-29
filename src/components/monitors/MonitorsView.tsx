@@ -665,79 +665,62 @@ export const MonitorsView: React.FC = () => {
         </div>
       )}
 
-      {/* Pagination Footer Bar */}
+      {/* Pagination Footer Bar (Matches Image 1) */}
       {filteredMonitors.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-2">
-            <span>
-              显示第 <strong className="text-slate-800 dark:text-slate-200">{startIndex + 1}</strong> - <strong className="text-slate-800 dark:text-slate-200">{Math.min(startIndex + pageSize, filteredMonitors.length)}</strong> 条，
-              共 <strong className="text-slate-800 dark:text-slate-200">{filteredMonitors.length}</strong> 条
-            </span>
-
-            <select
-              value={pageSize}
-              onChange={e => setPageSize(Number(e.target.value))}
-              className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-medium"
-            >
-              <option value={8}>8 条 / 页</option>
-              <option value={12}>12 条 / 页</option>
-              <option value={24}>24 条 / 页</option>
-              <option value={48}>48 条 / 页</option>
-            </select>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-sm text-xs text-slate-500 dark:text-slate-400">
+          <div>
+            显示第 {filteredMonitors.length === 0 ? 0 : `${startIndex + 1}-${Math.min(startIndex + pageSize, filteredMonitors.length)}`} 项，共 {filteredMonitors.length} 项
           </div>
 
           {/* Page Navigation */}
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
-                title="上一页"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center transition-colors"
+              title="上一页"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const pNum = i + 1;
-                  // Show current and near pages
-                  if (totalPages > 6 && Math.abs(pNum - currentPage) > 2 && pNum !== 1 && pNum !== totalPages) {
-                    if (Math.abs(pNum - currentPage) === 3) {
-                      return <span key={pNum} className="px-1 text-slate-400">...</span>;
-                    }
-                    return null;
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const pNum = i + 1;
+                if (totalPages > 6 && Math.abs(pNum - currentPage) > 2 && pNum !== 1 && pNum !== totalPages) {
+                  if (Math.abs(pNum - currentPage) === 3) {
+                    return <span key={pNum} className="px-1 text-slate-400">...</span>;
                   }
+                  return null;
+                }
 
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      onClick={() => setCurrentPage(pNum)}
-                      className={`min-w-[28px] h-7 px-2 rounded-lg font-mono font-medium transition-all ${
-                        currentPage === pNum
-                          ? 'bg-emerald-600 text-white font-bold shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
-                title="下一页"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                return (
+                  <button
+                    key={pNum}
+                    type="button"
+                    onClick={() => setCurrentPage(pNum)}
+                    className={`min-w-[28px] h-7 px-2 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center ${
+                      currentPage === pNum
+                        ? 'bg-teal-600 dark:bg-emerald-600 text-white shadow-sm'
+                        : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
             </div>
-          )}
+
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center transition-colors"
+              title="下一页"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
