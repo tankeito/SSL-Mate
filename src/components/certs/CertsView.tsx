@@ -103,7 +103,7 @@ export const CertsView: React.FC = () => {
         url += `&pfxPassword=${encodeURIComponent(pfxPassword)}`;
       }
       
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('sslmate_token') || localStorage.getItem('token');
       const response = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
