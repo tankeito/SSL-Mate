@@ -163,8 +163,11 @@ export const App: React.FC = () => {
         onClose={() => setWizardOpen(false)}
         initialTask={editingTask}
         onSuccess={(taskId, runNow) => {
+          setWizardOpen(false);
           if (runNow && taskId) {
-            handleOpenLiveLogs(taskId, editingTask ? editingTask.name : '自动化任务');
+            setTimeout(() => {
+              handleOpenLiveLogs(taskId, editingTask ? editingTask.name : '自动化证书任务');
+            }, 100);
           }
         }}
       />

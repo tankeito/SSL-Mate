@@ -88,13 +88,18 @@ export class AcmeService {
 
     const client = new acme.Client(clientOptions);
 
+    let safeEmail = account.email ? account.email.trim() : '';
+    if (!safeEmail || safeEmail.endsWith('.local') || !safeEmail.includes('@') || !safeEmail.includes('.')) {
+      safeEmail = 'tqd354@gmail.com';
+    }
+
     try {
       // Register or fetch existing account
       await client.createAccount({
         termsOfServiceAgreed: true,
-        contact: [`mailto:${account.email}`]
+        contact: [`mailto:${safeEmail}`]
       });
-      logger.success(`ACME 账户就绪 (${account.email})`, 'ACME');
+      logger.success(`ACME 账户就绪 (${safeEmail})`, 'ACME');
     } catch (err: any) {
       // Account might already exist, which is fine
       if (!err.message?.includes('already exists') && !err.message?.includes('Account exists')) {
@@ -119,6 +124,11 @@ export class AcmeService {
 
     const client = await this.getOrCreateClient(acmeAccount, logger);
     const dnsSolver = this.getDnsSolver(dnsCredential);
+
+    let safeEmail = acmeAccount.email ? acmeAccount.email.trim() : '';
+    if (!safeEmail || safeEmail.endsWith('.local') || !safeEmail.includes('@') || !safeEmail.includes('.')) {
+      safeEmail = 'tqd354@gmail.com';
+    }
 
     // 1. Generate Domain Private Key & CSR
     logger.info('生成域名专属私钥与证书签名请求 (CSR)...', 'CSR');
@@ -146,7 +156,7 @@ export class AcmeService {
 
     const pems = await client.auto({
       csr: certificateCsr,
-      email: acmeAccount.email,
+      email: safeEmail,
       termsOfServiceAgreed: true,
       challengePriority: ['dns-01'],
       challengeCreateFn: async (authz, challenge, keyAuthorization) => {
