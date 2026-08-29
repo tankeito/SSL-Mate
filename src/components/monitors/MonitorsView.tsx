@@ -275,16 +275,17 @@ export const MonitorsView: React.FC = () => {
   const parsedBatchCount = parseDomainsFromText(batchTextInput, defaultBatchPort).length;
 
   return (
-    <div className="space-y-5">
-      {/* Header & Main Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>全网域名 TLS 探针</span>
-            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 font-mono">
-              {countAll} 目标
-            </span>
-          </h2>
+    <div className="flex-1 flex flex-col justify-between space-y-6">
+      <div className="space-y-5">
+        {/* Header & Main Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>全网域名 TLS 探针</span>
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 font-mono">
+                {countAll} 目标
+              </span>
+            </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             全自动 7x24h 检测外部公网站点 HTTPS 证书有效期、握手延迟与证书链状态
           </p>
@@ -664,62 +665,65 @@ export const MonitorsView: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
 
-      {/* Pagination Footer Bar (Matches Image 1) */}
+      {/* Pagination Footer Bar (Always at bottom on PC) */}
       {filteredMonitors.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-sm text-xs text-slate-500 dark:text-slate-400">
-          <div>
-            显示第 {filteredMonitors.length === 0 ? 0 : `${startIndex + 1}-${Math.min(startIndex + pageSize, filteredMonitors.length)}`} 项，共 {filteredMonitors.length} 项
-          </div>
-
-          {/* Page Navigation */}
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center transition-colors"
-              title="上一页"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }).map((_, i) => {
-                const pNum = i + 1;
-                if (totalPages > 6 && Math.abs(pNum - currentPage) > 2 && pNum !== 1 && pNum !== totalPages) {
-                  if (Math.abs(pNum - currentPage) === 3) {
-                    return <span key={pNum} className="px-1 text-slate-400">...</span>;
-                  }
-                  return null;
-                }
-
-                return (
-                  <button
-                    key={pNum}
-                    type="button"
-                    onClick={() => setCurrentPage(pNum)}
-                    className={`min-w-[28px] h-7 px-2 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center ${
-                      currentPage === pNum
-                        ? 'bg-teal-600 dark:bg-emerald-600 text-white shadow-sm'
-                        : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {pNum}
-                  </button>
-                );
-              })}
+        <div className="mt-auto pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-sm text-xs text-slate-500 dark:text-slate-400">
+            <div>
+              显示第 {filteredMonitors.length === 0 ? 0 : `${startIndex + 1}-${Math.min(startIndex + pageSize, filteredMonitors.length)}`} 项，共 {filteredMonitors.length} 项
             </div>
 
-            <button
-              type="button"
-              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center transition-colors"
-              title="下一页"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {/* Page Navigation */}
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center transition-colors"
+                title="上一页"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const pNum = i + 1;
+                  if (totalPages > 6 && Math.abs(pNum - currentPage) > 2 && pNum !== 1 && pNum !== totalPages) {
+                    if (Math.abs(pNum - currentPage) === 3) {
+                      return <span key={pNum} className="px-1 text-slate-400">...</span>;
+                    }
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setCurrentPage(pNum)}
+                      className={`min-w-[28px] h-7 px-2 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center ${
+                        currentPage === pNum
+                          ? 'bg-teal-600 dark:bg-emerald-600 text-white shadow-sm'
+                          : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center transition-colors"
+                title="下一页"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
