@@ -43,18 +43,25 @@ export const CredentialsView: React.FC = () => {
   const [sshPassword, setSshPassword] = useState('');
   const [sshPrivateKey, setSshPrivateKey] = useState('');
 
-  // Test connection state
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchCredentials = async () => {
+  const fetchCredentials = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const data = await api.getCredentials();
       setCredentials(data);
+      if (showToast) {
+        toast.success('安全凭据列表已刷新');
+      }
     } catch (err) {
       console.error('Failed to load credentials:', err);
     } finally {
       setLoading(false);
+      if (showToast) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   };
 
@@ -194,10 +201,12 @@ export const CredentialsView: React.FC = () => {
 
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           <button
-            onClick={fetchCredentials}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+            onClick={() => fetchCredentials(true)}
+            disabled={refreshing}
+            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
+            title="刷新列表"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
           </button>
 
           <button

@@ -49,15 +49,23 @@ export const MonitorsView: React.FC = () => {
   // Edit Remark Modal
   const [editRemarkMonitor, setEditRemarkMonitor] = useState<DomainMonitor | null>(null);
   const [editRemarkValue, setEditRemarkValue] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMonitors = async () => {
+  const fetchMonitors = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const data = await api.getMonitors();
       setMonitors(data);
+      if (showToast) {
+        toast.success('域名探针监控列表已刷新');
+      }
     } catch (err) {
       console.error('Failed to load monitors:', err);
     } finally {
       setLoading(false);
+      if (showToast) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   };
 
@@ -248,11 +256,12 @@ export const MonitorsView: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchMonitors}
-              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+              onClick={() => fetchMonitors(true)}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
               title="刷新列表"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
             </button>
 
             <button

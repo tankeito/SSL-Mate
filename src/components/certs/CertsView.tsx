@@ -38,15 +38,23 @@ export const CertsView: React.FC = () => {
 
   // Copied state
   const [copied, setCopied] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchCerts = async () => {
+  const fetchCerts = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const data = await api.getCerts();
       setCerts(data);
+      if (showToast) {
+        toast.success('证书资产台账已刷新');
+      }
     } catch (err) {
       console.error('Failed to load certs:', err);
     } finally {
       setLoading(false);
+      if (showToast) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   };
 
@@ -149,11 +157,12 @@ export const CertsView: React.FC = () => {
             </button>
 
             <button
-              onClick={fetchCerts}
-              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+              onClick={() => fetchCerts(true)}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
               title="刷新列表"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
             </button>
           </div>
         </div>

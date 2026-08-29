@@ -39,15 +39,23 @@ export const AcmeAccountsView: React.FC = () => {
   const [eabHmacKey, setEabHmacKey] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const data = await api.getAcmeAccounts();
       setAccounts(data);
+      if (showToast) {
+        toast.success('CA 机构账户列表已刷新');
+      }
     } catch (err) {
       console.error('Failed to load acme accounts:', err);
     } finally {
       setLoading(false);
+      if (showToast) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   };
 
@@ -223,11 +231,12 @@ export const AcmeAccountsView: React.FC = () => {
 
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           <button
-            onClick={fetchAccounts}
-            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+            onClick={() => fetchAccounts(true)}
+            disabled={refreshing}
+            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
             title="刷新列表"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
           </button>
 
           <button

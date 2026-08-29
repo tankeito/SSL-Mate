@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { DashboardStats, CertTask } from '../../types';
 import { api } from '../../api/client';
+import { useModal } from '../../contexts/ModalContext';
 
 interface OverviewViewProps {
   onOpenNewTask: () => void;
@@ -30,12 +31,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onOpenInspectModal,
   onOpenLiveLogs
 }) => {
+  const { toast } = useModal();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tasks, setTasks] = useState<CertTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const [s, t] = await Promise.all([
         api.getStats(),
@@ -43,11 +46,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       ]);
       setStats(s);
       setTasks(t);
+      if (showToast) {
+        toast.success('控制台概览数据已刷新');
+      }
     } catch (err) {
       console.error('Failed to load overview data:', err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
+      if (showToast) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   };
 
@@ -56,8 +64,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   }, []);
 
   const handleManualCheck = () => {
-    setRefreshing(true);
-    fetchData();
+    fetchData(true);
   };
 
   if (loading) {
@@ -107,10 +114,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <button
                 onClick={handleManualCheck}
                 disabled={refreshing}
-                className="p-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-colors shrink-0"
+                className="p-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-all active:scale-95 shrink-0"
                 title="刷新统计数据"
               >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-200' : ''}`} />
               </button>
             </div>
           </div>

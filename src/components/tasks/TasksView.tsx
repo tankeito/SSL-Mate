@@ -34,15 +34,23 @@ export const TasksView: React.FC<TasksViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [runningTaskId, setRunningTaskId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const data = await api.getTasks();
       setTasks(data);
+      if (showToast) {
+        toast.success('自动化任务列表已刷新');
+      }
     } catch (err) {
       console.error('Failed to load tasks:', err);
     } finally {
       setLoading(false);
+      if (showToast) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   };
 
@@ -112,11 +120,12 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchTasks}
-              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+              onClick={() => fetchTasks(true)}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
               title="刷新列表"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
             </button>
 
             <button
