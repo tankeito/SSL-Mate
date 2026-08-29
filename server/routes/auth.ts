@@ -33,16 +33,22 @@ router.post('/login', (req: Request, res: Response) => {
   }
 
   const user = db.findUserByUsername(username) || db.findUserByEmail(username);
-  if (!user || user.authSource !== 'local' || !user.passwordHash) {
-    return res.status(401).json({ error: '用户名或密码错误' });
+  if (!user) {
+    return res.status(401).json({ error: '用户名或邮箱不存在' });
   }
 
   if (!user.isActive) {
     return res.status(403).json({ error: '该账户已被停用' });
   }
 
+  if (!user.passwordHash) {
+    return res.status(401).json({ 
+      error: '该账号为 AuthMate SSO 托管账号，未设置本地应急密码，请使用上方的【使用 AuthMate 账号一键登录】' 
+    });
+  }
+
   if (!verifyPassword(password, user.passwordHash)) {
-    return res.status(401).json({ error: '用户名或密码错误' });
+    return res.status(401).json({ error: '密码输入不正确，请重新输入' });
   }
 
   // Check if user has 2FA enabled
