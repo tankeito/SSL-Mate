@@ -218,7 +218,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scaleUp">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl lg:max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scaleUp">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -452,12 +452,12 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <p className="text-xs text-slate-400">证书签发成功后，自动并行分发至以下节点并执行平滑重载</p>
                 </div>
 
-                {/* Add Target Buttons */}
-                <div className="flex flex-wrap gap-1.5">
+                {/* Add Target Buttons (1 Line) */}
+                <div className="flex items-center gap-2 overflow-x-auto flex-nowrap shrink-0">
                   <button
                     type="button"
                     onClick={() => addDeployTarget('local_file')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-emerald-600 transition-all shrink-0 whitespace-nowrap"
                   >
                     <FolderDown className="w-3.5 h-3.5 text-emerald-600" />
                     <span>+ 本地目录</span>
@@ -465,7 +465,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('ssh')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition-all shrink-0 whitespace-nowrap"
                   >
                     <Server className="w-3.5 h-3.5 text-blue-600" />
                     <span>+ SSH 主机</span>
@@ -473,7 +473,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('aliyun_cdn')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 transition-all shrink-0 whitespace-nowrap"
                   >
                     <Cloud className="w-3.5 h-3.5 text-amber-600" />
                     <span>+ 阿里云CDN</span>
@@ -481,7 +481,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('webhook')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-purple-600 transition-all shrink-0 whitespace-nowrap"
                   >
                     <Send className="w-3.5 h-3.5 text-purple-600" />
                     <span>+ Webhook</span>

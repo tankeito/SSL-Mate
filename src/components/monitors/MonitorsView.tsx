@@ -425,44 +425,58 @@ export const MonitorsView: React.FC = () => {
             const isHealthy = m.status === 'healthy';
             const isWarning = m.status === 'warning';
             const isExpired = m.status === 'expired';
+            const days = m.daysLeft ?? 0;
+            const progressPercent = Math.min(Math.max((days / 90) * 100, 4), 100);
 
             return (
               <div
                 key={m.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/40 rounded-2xl p-4 shadow-sm space-y-3 flex flex-col justify-between transition-all hover:shadow-md group"
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/50 dark:hover:border-emerald-500/40 rounded-3xl p-4 sm:p-4.5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group relative overflow-hidden flex flex-col justify-between"
               >
-                <div className="space-y-2.5">
+                {/* Top Status Gradient Bar */}
+                <div className={`absolute top-0 left-0 right-0 h-1 ${
+                  isHealthy ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
+                  isWarning ? 'bg-gradient-to-r from-amber-500 to-orange-400' :
+                  'bg-gradient-to-r from-rose-500 to-pink-500'
+                }`}></div>
+
+                <div className="space-y-3 pt-1">
                   {/* Card Header: Globe + Domain + Status Tag */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center mt-0.5 ${
+                      <div className={`w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center relative mt-0.5 shadow-sm ${
                         isHealthy ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' :
                         isWarning ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' :
                         'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400'
                       }`}>
                         <Globe className="w-4 h-4" />
+                        <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 ${
+                          isHealthy ? 'bg-emerald-500' : isWarning ? 'bg-amber-500' : 'bg-rose-500'
+                        }`}></span>
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 group/link">
-                          <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white font-mono truncate" title={m.domain}>
+                          <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white font-mono truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" title={m.domain}>
                             {m.domain}
                           </h3>
                           <a
                             href={`https://${m.domain}${m.port !== 443 ? `:${m.port}` : ''}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-slate-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="text-slate-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                             title="打开 HTTPS 站点"
                           >
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-                          <span>端口: {m.port}</span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 flex-wrap">
+                          <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded text-slate-500 dark:text-slate-400">
+                            端口:{m.port}
+                          </span>
                           {m.remark && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium truncate max-w-[100px]" title={m.remark}>
-                              <Tag className="w-2.5 h-2.5 text-emerald-500" />
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium truncate max-w-[110px]" title={m.remark}>
+                              <Tag className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
                               <span className="truncate">{m.remark}</span>
                             </span>
                           )}
@@ -470,30 +484,42 @@ export const MonitorsView: React.FC = () => {
                       </div>
                     </div>
 
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                      isHealthy ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300' :
-                      isWarning ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300' :
-                      'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300'
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+                      isHealthy ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50' :
+                      isWarning ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border-amber-200 dark:border-amber-800/50' :
+                      'bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200 dark:border-rose-800/50'
                     }`}>
                       {isHealthy ? '正常有效' : isWarning ? '即将到期' : isExpired ? '已过期' : '不可达'}
                     </span>
                   </div>
 
-                  {/* Validity Countdown Pill */}
+                  {/* Validity Countdown Pill & Visual Mini Progress Bar */}
                   {m.daysLeft !== undefined && (
-                    <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                      <span className="text-slate-400 text-[11px]">证书剩余有效期</span>
-                      <span className={`font-bold font-mono text-sm ${
-                        m.daysLeft <= 7 ? 'text-rose-500' : m.daysLeft <= 30 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
-                      }`}>
-                        {m.daysLeft} 天
-                      </span>
+                    <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400 text-[11px]">证书剩余有效期</span>
+                        <span className={`font-bold font-mono text-sm ${
+                          m.daysLeft <= 7 ? 'text-rose-500' : m.daysLeft <= 30 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {m.daysLeft} 天
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            m.daysLeft <= 7 ? 'bg-gradient-to-r from-rose-500 to-rose-600' :
+                            m.daysLeft <= 30 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                            'bg-gradient-to-r from-emerald-500 to-teal-500'
+                          }`}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
                     </div>
                   )}
 
                   {/* Issuer info */}
                   {m.issuer && (
-                    <div className="text-[11px] text-slate-400 truncate flex items-center justify-between">
+                    <div className="text-[11px] text-slate-400 truncate flex items-center justify-between pt-0.5">
                       <span>颁发机构:</span>
                       <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[140px]" title={m.issuer}>
                         {m.issuer}
@@ -503,37 +529,37 @@ export const MonitorsView: React.FC = () => {
 
                   {/* Error if any */}
                   {m.lastCheckError && (
-                    <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-[10px] truncate" title={m.lastCheckError}>
+                    <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-[10px] truncate" title={m.lastCheckError}>
                       {m.lastCheckError}
                     </div>
                   )}
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400">
-                  <span>{m.lastCheckAt ? new Date(m.lastCheckAt).toLocaleTimeString() : '等待检测'}</span>
+                <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400">
+                  <span className="font-mono">{m.lastCheckAt ? new Date(m.lastCheckAt).toLocaleTimeString() : '等待初检'}</span>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
                         setEditRemarkMonitor(m);
                         setEditRemarkValue(m.remark || '');
                       }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                      title="修改备注"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      title="修改业务备注"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleCheck(m.id, m.domain)}
                       disabled={isChecking}
-                      className="p-1 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       title="立即发起 TLS 探针检测"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin text-emerald-500' : ''}`} />
                     </button>
                     <button
                       onClick={() => handleDelete(m.id, m.domain)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                       title="删除探针"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
