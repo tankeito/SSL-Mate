@@ -33,25 +33,28 @@ export const OAuthCallback: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
-          {error ? <AlertCircle className="w-8 h-8 text-rose-500" /> : <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />}
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Light Background Ambient Mesh */}
+      <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-emerald-100/60 via-teal-100/40 to-transparent rounded-full blur-3xl pointer-events-none -top-20 -left-20"></div>
+
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-8 shadow-xl shadow-slate-200/60 text-center space-y-4 relative z-10">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+          {error ? <AlertCircle className="w-8 h-8 text-rose-500" /> : <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />}
         </div>
 
         <div>
-          <h2 className="text-lg font-bold text-white">
+          <h2 className="text-lg font-bold text-slate-900">
             {error ? 'AuthMate SSO 单点登录失败' : '正在完成 AuthMate 统一身份认证...'}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            {error ? error : '正在与 IdP 服务器安全交换令牌并建立会话，请稍候'}
+          <p className="text-xs text-slate-500 mt-1">
+            {error ? error : '正在与 IdP 服务器安全交换令牌并建立安全会话，请稍候'}
           </p>
         </div>
 
         {error && (
           <a
             href="/login"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors mt-2"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors mt-2"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>返回登录页</span>
