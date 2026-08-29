@@ -23,6 +23,13 @@ import {
 import { Credential, CredentialType } from '../../types';
 import { api } from '../../api/client';
 import { useModal } from '../../contexts/ModalContext';
+import { 
+  CloudflareLogo, 
+  AliyunLogo, 
+  TencentCloudLogo, 
+  HuaweiCloudLogo, 
+  SSHHostLogo 
+} from '../common/BrandIcons';
 
 type CredCategoryFilter = 'all' | 'dns' | 'ssh' | 'other';
 
@@ -248,42 +255,51 @@ export const CredentialsView: React.FC = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedCredentials = filteredCredentials.slice(startIndex, startIndex + pageSize);
 
-  // Helper for Credential Brand Meta
+  // Helper for Credential Brand Meta with Real SVG Logo
   const getCredMeta = (type: CredentialType) => {
     switch (type) {
       case 'dns_cloudflare':
         return {
           label: 'Cloudflare DNS',
           badge: 'bg-orange-50 text-orange-700 dark:bg-orange-950/80 dark:text-orange-300 border-orange-200 dark:border-orange-800/60',
-          iconBg: 'bg-gradient-to-br from-orange-500 to-amber-600 text-white',
+          LogoComponent: CloudflareLogo,
           typeText: 'DNS-01 验证'
         };
       case 'dns_aliyun':
+      case 'aliyun_cloud':
         return {
           label: '阿里云 DNS',
           badge: 'bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
-          iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 text-white',
+          LogoComponent: AliyunLogo,
           typeText: 'DNS-01 验证'
         };
       case 'dns_tencent':
+      case 'tencent_cloud':
         return {
           label: '腾讯云 DNSPod',
           badge: 'bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border-blue-200 dark:border-blue-800/60',
-          iconBg: 'bg-gradient-to-br from-blue-500 to-cyan-600 text-white',
+          LogoComponent: TencentCloudLogo,
+          typeText: 'DNS-01 验证'
+        };
+      case 'dns_huawei':
+        return {
+          label: '华为云 DNS',
+          badge: 'bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200 dark:border-rose-800/60',
+          LogoComponent: HuaweiCloudLogo,
           typeText: 'DNS-01 验证'
         };
       case 'ssh_host':
         return {
           label: 'SSH 远程主机',
           badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
-          iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white',
+          LogoComponent: SSHHostLogo,
           typeText: '远程部署'
         };
       default:
         return {
           label: '通用凭据',
           badge: 'bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border-purple-200 dark:border-purple-800/60',
-          iconBg: 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white',
+          LogoComponent: SSHHostLogo,
           typeText: '扩展服务'
         };
     }
@@ -427,10 +443,10 @@ export const CredentialsView: React.FC = () => {
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/40 rounded-2xl p-4 shadow-sm space-y-3 flex flex-col justify-between transition-all hover:shadow-md group"
                 >
                   <div className="space-y-3">
-                    {/* Header */}
+                    {/* Header with Authentic Brand SVG Logo */}
                     <div className="flex items-start gap-2.5">
-                      <div className={`w-9 h-9 rounded-xl ${meta.iconBg} flex items-center justify-center shadow-sm shrink-0 mt-0.5`}>
-                        <Lock className="w-4 h-4" />
+                      <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center p-1.5 shadow-sm shrink-0 mt-0.5">
+                        <meta.LogoComponent className="w-6 h-6 object-contain" size={24} />
                       </div>
 
                       <div className="min-w-0 flex-1">

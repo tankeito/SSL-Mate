@@ -164,17 +164,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`hidden md:flex flex-col justify-between bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800/80 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
         {navContent}
 
-        {/* Collapse Toggle Footer */}
-        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between">
+        {/* Collapse Toggle Footer (Pinned to Right Corner) */}
+        <div className={`p-3 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center ${collapsed ? 'justify-center' : 'justify-between gap-2'}`}>
           {!collapsed && (
-            <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-              <span>守护进程在线运行</span>
+            <div className="text-[11px] text-slate-400 flex items-center gap-1.5 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0"></span>
+              <span className="truncate">守护进程在线运行</span>
             </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mx-auto"
+            className={`p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+              collapsed ? 'mx-auto' : 'ml-auto shrink-0'
+            }`}
             title={collapsed ? '展开侧边栏' : '折叠侧边栏'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
