@@ -90,11 +90,11 @@ export const CredentialsView: React.FC = () => {
 
   const openAddModal = () => {
     setEditingCred(null);
-    setCredName('');
+    setCredName('Cloudflare');
     setCredType('dns_cloudflare');
     setCredRemark('');
     setCfApiToken('');
-    setCfAuthEmail('');
+    setCfAuthEmail('tqd354@gmail.com');
     setCfAuthKey('');
     setAliAccessKeyId('');
     setAliAccessKeySecret('');
@@ -595,79 +595,77 @@ export const CredentialsView: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-3.5 text-xs">
+            <div className="space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">凭据类型</label>
-                <select
-                  value={credType}
-                  onChange={e => setCredType(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-medium"
-                >
-                  <option value="dns_cloudflare">Cloudflare API (DNS-01 验证)</option>
-                  <option value="dns_aliyun">阿里云 DNS (AccessKey)</option>
-                  <option value="dns_tencent">腾讯云 DNSPod (SecretId/SecretKey)</option>
-                  <option value="ssh_host">SSH 远程主机凭据 (证书自动分发与重载)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">凭据显示名称</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <span className="text-rose-500">*</span> 名称
+                </label>
                 <input
                   type="text"
                   value={credName}
                   onChange={e => setCredName(e.target.value)}
-                  placeholder="例如: 生产 Cloudflare API Key / 核心 Nginx 主机"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-medium"
+                  placeholder="Cloudflare"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">业务备注 (可选)</label>
-                <input
-                  type="text"
-                  value={credRemark}
-                  onChange={e => setCredRemark(e.target.value)}
-                  placeholder="例如: 专门用于主域名解析"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-medium"
-                />
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <span className="text-rose-500">*</span> 类型
+                </label>
+                <select
+                  value={credType}
+                  onChange={e => {
+                    const newType = e.target.value as any;
+                    setCredType(newType);
+                    if (!editingCred) {
+                      if (newType === 'dns_cloudflare') setCredName('Cloudflare');
+                      else if (newType === 'dns_aliyun') setCredName('阿里云 DNS');
+                      else if (newType === 'dns_tencent') setCredName('腾讯云 DNSPod');
+                      else if (newType === 'ssh_host') setCredName('SSH 主机');
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="dns_cloudflare">Cloudflare</option>
+                  <option value="dns_aliyun">阿里云 DNS (AccessKey)</option>
+                  <option value="dns_tencent">腾讯云 DNSPod (SecretId/SecretKey)</option>
+                  <option value="ssh_host">SSH 远程主机凭据</option>
+                </select>
               </div>
 
-              {/* Cloudflare Config */}
+              {/* Cloudflare Config (1Panel Style) */}
               {credType === 'dns_cloudflare' && (
-                <div className="space-y-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60">
-                  <span className="font-bold text-slate-800 dark:text-slate-200 block">Cloudflare 凭据配置</span>
+                <div className="space-y-3.5">
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-400 mb-1">API Token (推荐, 权限: Zone.DNS:Edit)</label>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      EMAIL
+                    </label>
+                    <input
+                      type="email"
+                      value={cfAuthEmail}
+                      onChange={e => setCfAuthEmail(e.target.value)}
+                      placeholder="tqd354@gmail.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      <span className="text-rose-500">*</span> API Token
+                    </label>
                     <input
                       type="password"
                       value={cfApiToken}
                       onChange={e => setCfApiToken(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono"
+                      placeholder="Cloudflare API 令牌"
+                      required
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
-                  </div>
-                  <div className="text-slate-400 text-center">- 或使用 Global API Key -</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-slate-600 dark:text-slate-400 mb-1">Auth Email</label>
-                      <input
-                        type="email"
-                        value={cfAuthEmail}
-                        onChange={e => setCfAuthEmail(e.target.value)}
-                        placeholder="user@example.com"
-                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-600 dark:text-slate-400 mb-1">Global API Key</label>
-                      <input
-                        type="password"
-                        value={cfAuthKey}
-                        onChange={e => setCfAuthKey(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono"
-                      />
-                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      请勿使用 Global API Key（请在 Cloudflare 控制台创建具有 Zone.DNS.Edit 权限的 API 令牌）
+                    </p>
                   </div>
                 </div>
               )}

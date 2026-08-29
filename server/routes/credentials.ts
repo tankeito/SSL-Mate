@@ -142,8 +142,6 @@ router.post('/test', async (req: AuthenticatedRequest, res: Response) => {
 
   try {
     if (type === 'dns_cloudflare') {
-      const solver = new CloudflareDnsSolver(config);
-      // Validate token by listing zones
       const headers: Record<string, string> = {};
       if (config.apiToken) {
         headers['Authorization'] = `Bearer ${config.apiToken.trim()}`;
@@ -151,12 +149,27 @@ router.post('/test', async (req: AuthenticatedRequest, res: Response) => {
         headers['X-Auth-Email'] = config.authEmail?.trim() || '';
         headers['X-Auth-Key'] = config.authKey?.trim() || '';
       }
+
+      // If token provided, try verify token endpoint first
+      if (config.apiToken) {
+        try {
+          const verifyRes = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', { headers });
+          const verifyData = await verifyRes.json() as any;
+          if (verifyRes.ok && verifyData.success) {
+            return res.json({ 
+              success: true, 
+              message: `✅ Cloudflare API Token 校验通过！(状态: ${verifyData.result?.status || 'active'})` 
+            });
+          }
+        } catch (_) {}
+      }
+
       const testRes = await fetch('https://api.cloudflare.com/client/v4/zones?per_page=1', { headers });
       const data = await testRes.json() as any;
       if (!testRes.ok || !data.success) {
-        throw new Error(data.errors?.[0]?.message || 'Cloudflare 认证失败');
+        throw new Error(data.errors?.[0]?.message || 'Cloudflare 认证失败，请检查 API Token 或权限');
       }
-      return res.json({ success: true, message: 'Cloudflare API 凭据验证成功' });
+      return res.json({ success: true, message: '✅ Cloudflare API 凭据验证成功，已连接 DNS 服务！' });
     }
 
     // Default mock response for other platforms
