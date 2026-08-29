@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  ssl-mate:
+    build: .
+    container_name: ssl-mate
+    restart: always
+    ports:
+      - "8989:8989"
+    environment:
+      - PORT=8989
+      - JWT_SECRET=sslmate_super_secret_jwt_key_2026_x89a
+      - MASTER_KEY=sslmate_master_encryption_key_32bytes_sec
+      - AUTHMATE_ENABLED=true
+      - AUTHMATE_ISSUER_URL=http://authmate-app:8787
+      - AUTHMATE_CLIENT_ID=sslmate-app
+      - AUTHMATE_CLIENT_SECRET=authmate-client-secret-sslmate
+      - AUTHMATE_REDIRECT_URI=https://ssl.yourdomain.com/oauth/callback
+    volumes:
+      - sslmate_data:/app/data
+
+volumes:
+  sslmate_data:
