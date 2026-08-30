@@ -222,7 +222,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 space-y-6 shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl p-6 sm:p-7 space-y-6 shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -380,18 +380,20 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
           {/* STEP 2: Deploy Targets */}
           {step === 2 && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">部署目标节点配置</h4>
-                  <p className="text-xs text-slate-400">证书签发成功后，自动并行分发至以下节点并执行平滑重载</p>
+              <div className="pb-3 border-b border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">部署目标节点配置</h4>
+                    <p className="text-xs text-slate-400">证书签发成功后，自动并行分发至以下节点并执行平滑重载</p>
+                  </div>
                 </div>
 
-                {/* Add Target Buttons */}
-                <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap shrink-0">
+                {/* Add Target Buttons (Wrap neatly) */}
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => addDeployTarget('bt_panel')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 transition-all shrink-0 whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 transition-all active:scale-95 shadow-sm"
                   >
                     <BaotaLogo className="w-3.5 h-3.5" size={14} />
                     <span>+ 宝塔面板</span>
@@ -399,7 +401,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('one_panel')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 text-xs font-bold text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/60 transition-all shrink-0 whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 text-xs font-bold text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/60 transition-all active:scale-95 shadow-sm"
                   >
                     <OnePanelLogo className="w-3.5 h-3.5" size={14} />
                     <span>+ 1Panel</span>
@@ -407,7 +409,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('ssh')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 transition-all shrink-0 whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 border border-slate-200 dark:border-slate-700 transition-all active:scale-95 shadow-sm"
                   >
                     <Server className="w-3.5 h-3.5 text-blue-600" />
                     <span>+ SSH 主机</span>
@@ -415,7 +417,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('local_file')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all shrink-0 whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
                   >
                     <FolderDown className="w-3.5 h-3.5 text-emerald-600" />
                     <span>+ 本地目录</span>
@@ -423,7 +425,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('aliyun_cdn')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 transition-all shrink-0 whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
                   >
                     <Cloud className="w-3.5 h-3.5 text-amber-600" />
                     <span>+ CDN</span>
@@ -431,7 +433,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addDeployTarget('webhook')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-purple-600 transition-all shrink-0 whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-purple-600 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
                   >
                     <Send className="w-3.5 h-3.5 text-purple-600" />
                     <span>+ Webhook</span>
@@ -440,8 +442,19 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
               </div>
 
               {/* Targets List */}
-              <div className="space-y-3">
-                {deployTargets.map(target => (
+              {deployTargets.length === 0 ? (
+                <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-2.5">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                  <h5 className="text-sm font-bold text-slate-800 dark:text-slate-200">尚未添加任何部署目标</h5>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    点击上方绿色按钮添加 <span className="font-bold text-emerald-600 dark:text-emerald-400">【+ 宝塔面板】</span> 或 <span className="font-bold text-cyan-600 dark:text-cyan-400">【+ 1Panel】</span>；若仅需在平台内统一下载归档，可直接点击右下角下一步跳过。
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {deployTargets.map(target => (
                   <div key={target.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -634,7 +647,8 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                     )}
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
