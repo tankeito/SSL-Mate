@@ -52,11 +52,17 @@ app.get('/events/tasks/:taskId', (req: Request, res: Response) => {
   logBroadcaster.subscribe(taskId, res);
 });
 
-// Production Static Serving
-const distDir = path.resolve(process.cwd(), 'dist');
+// Production Static Serving (Robust path detection)
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distDir = fs.existsSync(path.resolve(__dirname, '../dist'))
+  ? path.resolve(__dirname, '../dist')
+  : path.resolve(process.cwd(), 'dist');
+
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
-  app.use((req: Request, res: Response, next) => {
+  app.get('*', (req: Request, res: Response, next) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/events')) {
       res.sendFile(path.join(distDir, 'index.html'));
     } else {
