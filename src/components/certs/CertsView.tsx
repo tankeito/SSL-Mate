@@ -19,22 +19,30 @@ import {
   ChevronRight,
   Upload,
   ClipboardPaste,
-  RotateCcw
+  RotateCcw,
+  LayoutGrid,
+  List,
+  Globe,
+  Tag
 } from 'lucide-react';
 import { Certificate } from '../../types';
 import { api } from '../../api/client';
 import { useModal } from '../../contexts/ModalContext';
+
+type CertStatusFilter = 'all' | 'healthy' | 'warning' | 'expired';
 
 export const CertsView: React.FC = () => {
   const { confirm, toast } = useModal();
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<CertStatusFilter>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Pagination
+  // Pagination (12 items per page = 4 cols x 3 rows)
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
 
   // Selected Cert for detail / download
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
@@ -76,7 +84,7 @@ export const CertsView: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, pageSize]);
+  }, [search, statusFilter, pageSize]);
 
   const handleDeleteCert = async (id: string, domain: string) => {
     const ok = await confirm({
@@ -183,11 +191,35 @@ export const CertsView: React.FC = () => {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const filteredCerts = certs.filter(c => 
-    c.primaryDomain.toLowerCase().includes(search.toLowerCase()) ||
-    (c.issuer && c.issuer.toLowerCase().includes(search.toLowerCase())) ||
-    (c.sanDomains && c.sanDomains.some((d: string) => d.toLowerCase().includes(search.toLowerCase())))
-  );
+  // Filter & Search Logic
+  const filteredCerts = certs.filter(c => {
+    const days = c.daysLeft ?? 90;
+    const isExpiring = days <= 30;
+    const isExpired = days <= 0 || Boolean(c.isExpired);
+
+    const matchSearch = 
+      c.primaryDomain.toLowerCase().includes(search.toLowerCase()) ||
+      (c.issuer && c.issuer.toLowerCase().includes(search.toLowerCase())) ||
+      (c.sanDomains && c.sanDomains.some((d: string) => d.toLowerCase().includes(search.toLowerCase())));
+
+    if (!matchSearch) return false;
+
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'healthy') return !isExpired && days > 30;
+    if (statusFilter === 'warning') return !isExpired && isExpiring && days > 0;
+    if (statusFilter === 'expired') return isExpired;
+
+    return true;
+  });
+
+  // Statistics
+  const countAll = certs.length;
+  const countHealthy = certs.filter(c => !c.isExpired && (c.daysLeft ?? 90) > 30).length;
+  const countWarning = certs.filter(c => {
+    const d = c.daysLeft ?? 90;
+    return !c.isExpired && d > 0 && d <= 30;
+  }).length;
+  const countExpired = certs.filter(c => c.isExpired || (c.daysLeft ?? 90) <= 0).length;
 
   // Pagination
   const totalPages = Math.ceil(filteredCerts.length / pageSize) || 1;
@@ -209,40 +241,109 @@ export const CertsView: React.FC = () => {
             <p className="text-xs text-slate-500 dark:text-slate-400">所有自动化签发及归档的物理 SSL 证书仓库，支持全格式导出与在线解析体检</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-56">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="搜索域名或签发机构..."
-                className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            {/* View mode toggle */}
+            <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl gap-1 shrink-0">
               <button
-                onClick={() => setInspectModalOpen(true)}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                title="卡片矩阵视图"
               >
-                <FileSearch className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>证书在线体检</span>
+                <LayoutGrid className="w-4 h-4" />
               </button>
-
               <button
-                onClick={() => fetchCerts(true)}
-                disabled={refreshing}
-                className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
-                title="刷新列表"
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                title="紧凑表格视图"
               >
-                <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
+                <List className="w-4 h-4" />
               </button>
             </div>
+
+            <button
+              onClick={() => setInspectModalOpen(true)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
+            >
+              <FileSearch className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>证书在线体检</span>
+            </button>
+
+            <button
+              onClick={() => fetchCerts(true)}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shrink-0"
+              title="刷新列表"
+            >
+              <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
+            </button>
           </div>
         </div>
 
-        {/* Certificates Table */}
+        {/* Filter Chips & Search Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 p-3 rounded-2xl shadow-sm">
+          {/* Status Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                statusFilter === 'all'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              全部 ({countAll})
+            </button>
+            <button
+              onClick={() => setStatusFilter('healthy')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                statusFilter === 'healthy'
+                  ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                  : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>正常有效 ({countHealthy})</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('warning')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                statusFilter === 'warning'
+                  ? 'bg-amber-500 text-white font-bold shadow-sm'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span>即将到期 ({countWarning})</span>
+            </button>
+            {countExpired > 0 && (
+              <button
+                onClick={() => setStatusFilter('expired')}
+                className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                  statusFilter === 'expired'
+                    ? 'bg-rose-600 text-white font-bold shadow-sm'
+                    : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-400"></span>
+                <span>已过期 ({countExpired})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full md:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="搜索域名或签发机构..."
+              className="w-full pl-9 pr-3.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        </div>
+
+        {/* Certificates Content: Grid or Table */}
         {loading ? (
           <div className="flex items-center justify-center min-h-[300px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
@@ -253,13 +354,158 @@ export const CertsView: React.FC = () => {
               <Award className="w-6 h-6" />
             </div>
             <h3 className="font-bold text-slate-800 dark:text-slate-200">
-              {search ? '未找到符合条件的证书资产' : '暂无证书资产'}
+              {search || statusFilter !== 'all' ? '未找到符合条件的证书资产' : '暂无证书资产'}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              {search ? '请尝试更换搜索关键词' : '当自动化任务执行成功后，签发出来的全套证书与私钥将自动入库并在此归档。'}
+              {search || statusFilter !== 'all' 
+                ? '请尝试更换搜索关键词或重置状态过滤项' 
+                : '当自动化任务执行成功后，签发出来的全套证书与私钥将自动入库并在此归档。'}
             </p>
           </div>
+        ) : viewMode === 'grid' ? (
+          /* ================= 1. Modern 4-Column Certificate Card Grid ================= */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {paginatedCerts.map(cert => {
+              const days = cert.daysLeft ?? 90;
+              const isExpiring = days <= 30;
+              const isExpired = days <= 0 || Boolean(cert.isExpired);
+              const progressPercent = Math.min(Math.max((days / 90) * 100, 4), 100);
+              const hasSAN = cert.sanDomains && cert.sanDomains.length > 1;
+
+              return (
+                <div
+                  key={cert.id}
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/50 dark:hover:border-emerald-500/40 rounded-3xl p-4 sm:p-4.5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group relative overflow-hidden flex flex-col justify-between"
+                >
+                  {/* Top Status Gradient Bar */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${
+                    isExpired ? 'bg-gradient-to-r from-rose-500 to-pink-500' :
+                    isExpiring ? 'bg-gradient-to-r from-amber-500 to-orange-400' :
+                    'bg-gradient-to-r from-emerald-500 to-teal-400'
+                  }`}></div>
+
+                  <div className="space-y-3 pt-1">
+                    {/* Card Header: ShieldCheck + Primary Domain + Status Tag */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <div className={`w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center relative mt-0.5 shadow-sm ${
+                          isExpired ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' :
+                          isExpiring ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' :
+                          'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+                        }`}>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 ${
+                            isExpired ? 'bg-rose-500' : isExpiring ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}></span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white font-mono truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" title={cert.primaryDomain}>
+                            {cert.primaryDomain}
+                          </h3>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 flex-wrap">
+                            <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded text-slate-500 dark:text-slate-400">
+                              {cert.keyType?.toUpperCase() || 'ECC'}
+                            </span>
+                            {hasSAN && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                                +{cert.sanDomains.length - 1} 备用域名
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status Pill */}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+                        isExpired ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200 dark:border-rose-800/50' :
+                        isExpiring ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border-amber-200 dark:border-amber-800/50' :
+                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
+                      }`}>
+                        {isExpired ? '已过期' : `剩余 ${days} 天`}
+                      </span>
+                    </div>
+
+                    {/* Validity Countdown Pill & Visual Mini Progress Bar */}
+                    <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400 text-[11px]">证书剩余有效期</span>
+                        <span className={`font-bold font-mono text-sm ${
+                          isExpired ? 'text-rose-500' : isExpiring ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {isExpired ? '已过期' : `${days} 天`}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isExpired ? 'bg-rose-500' :
+                            isExpiring ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                            'bg-gradient-to-r from-emerald-500 to-teal-500'
+                          }`}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                        <span>到期时间</span>
+                        <span className="font-mono">{new Date(cert.expiresAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Issuer and Serial info */}
+                    <div className="space-y-1 text-[11px] text-slate-400">
+                      <div className="flex items-center justify-between">
+                        <span>签发机构:</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[130px]" title={cert.issuer}>
+                          {cert.issuer || 'Let\'s Encrypt'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span>序列号:</span>
+                        <span className="font-mono text-slate-500 dark:text-slate-400 truncate max-w-[130px]" title={cert.serialNumber}>
+                          {cert.serialNumber ? `SN: ${cert.serialNumber.slice(0, 12)}...` : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <button
+                      onClick={() => setDownloadModalCert(cert)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-xs font-semibold transition-colors"
+                      title="一键导出多格式证书"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>导出证书</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={async () => {
+                          const full = await api.getCert(cert.id);
+                          setSelectedCert(full);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="查看完整 PEM 内容"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCert(cert.id, cert.primaryDomain)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                        title="删除证书归档"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* ================= 2. Compact Table View ================= */
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-600 dark:text-slate-400">
