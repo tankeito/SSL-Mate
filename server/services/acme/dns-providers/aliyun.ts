@@ -71,6 +71,20 @@ export class AliyunDnsSolver {
 
   public async setRecord(domain: string, key: string, value: string): Promise<string> {
     const { mainDomain, rr } = this.parseDomain(domain);
+
+    // Clean up stale challenge records first to prevent conflicts
+    try {
+      const existing = await this.request('DescribeSubDomainRecords', {
+        SubDomain: `${rr}.${mainDomain}`,
+        Type: 'TXT'
+      });
+      if (existing?.DomainRecords?.Record) {
+        for (const rec of existing.DomainRecords.Record) {
+          await this.request('DeleteDomainRecord', { RecordId: rec.RecordId });
+        }
+      }
+    } catch (_) {}
+
     const data = await this.request('AddDomainRecord', {
       DomainName: mainDomain,
       RR: rr,
