@@ -554,6 +554,22 @@ export const CredentialsView: React.FC = () => {
                           </span>
                         </div>
                       )}
+                      {c.type === 'bt_panel' && (
+                        <div className="flex items-center justify-between">
+                          <span>宝塔地址:</span>
+                          <span className="font-mono text-slate-700 dark:text-slate-300 truncate max-w-[140px]" title={c.config?.apiUrl || c.config?.url}>
+                            {c.config?.apiUrl || c.config?.url || '已配置'}
+                          </span>
+                        </div>
+                      )}
+                      {c.type === 'one_panel' && (
+                        <div className="flex items-center justify-between">
+                          <span>1Panel 地址:</span>
+                          <span className="font-mono text-slate-700 dark:text-slate-300 truncate max-w-[140px]" title={c.config?.apiUrl || c.config?.url}>
+                            {c.config?.apiUrl || c.config?.url || '已配置'}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
                         <span>加密等级</span>
