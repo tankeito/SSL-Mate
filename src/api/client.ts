@@ -72,7 +72,8 @@ export const api = {
   createCredential: (data: any) => request('/credentials', { method: 'POST', body: JSON.stringify(data) }),
   updateCredential: (id: string, data: any) => request(`/credentials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCredential: (id: string) => request(`/credentials/${id}`, { method: 'DELETE' }),
-  testCredential: (data: any) => request<{ success: boolean; message: string }>('/credentials/test', { method: 'POST', body: JSON.stringify(data) }),
+  testCredential: (data: any) => request<{ success: boolean; message: string; sites?: any[] }>('/credentials/test', { method: 'POST', body: JSON.stringify(data) }),
+  getCredentialSites: (id: string) => request<{ sites: string[] }>(`/credentials/${id}/sites`),
 
   // ACME Accounts
   getAcmeAccounts: () => request<any[]>('/acme-accounts'),

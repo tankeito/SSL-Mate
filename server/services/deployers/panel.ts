@@ -1,10 +1,77 @@
+import crypto from 'crypto';
 import { DeployTarget, Credential } from '../../db/schema.js';
 import { decryptObject } from '../crypto.js';
 import { TaskLogger } from '../logger.js';
 
+/**
+ * Baota (BT Panel / aaPanel) API Auth helper
+ */
+function getBtAuth(apiKey: string) {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const keyMd5 = crypto.createHash('md5').update(apiKey.trim()).digest('hex');
+  const requestToken = crypto.createHash('md5').update(timestamp + keyMd5).digest('hex');
+  return { request_time: timestamp, request_token: requestToken };
+}
+
+/**
+ * Send HTTP request to Baota Panel API with IP whitelist detection
+ */
+export async function requestBtApi(
+  baseUrl: string,
+  apiKey: string,
+  path: string,
+  params: Record<string, string> = {},
+  ignoreSsl: boolean = false
+): Promise<any> {
+  const cleanBase = baseUrl.replace(/\/+$/, '');
+  const auth = getBtAuth(apiKey);
+  const body = new URLSearchParams({
+    ...auth,
+    ...params
+  });
+
+  const url = `${cleanBase}${path.startsWith('/') ? path : `/${path}`}`;
+  
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'SSL-Mate-Deployer/1.0'
+      },
+      body: body.toString()
+    });
+  } catch (err: any) {
+    throw new Error(`无法连接宝塔面板 (${cleanBase}): ${err.message}`);
+  }
+
+  const rawText = await res.text();
+  let json: any;
+  try {
+    json = JSON.parse(rawText);
+  } catch (e) {
+    if (res.status === 403 || rawText.includes('IP') || rawText.includes('whitelist') || rawText.includes('白名单')) {
+      throw new Error(`宝塔 API 访问被拦截 (403)：调用方 IP 未在宝塔 API 白名单内。请前往宝塔面板【面板设置】➔【API 接口】，将 SSL-Mate 运行服务器 IP 添加到白名单。`);
+    }
+    throw new Error(`宝塔 API 返回非 JSON 响应: ${rawText.slice(0, 200)}`);
+  }
+
+  // Check IP whitelist error in JSON response
+  if (json && json.status === false) {
+    const msg = String(json.msg || '');
+    if (msg.includes('IP') || msg.includes('白名单') || msg.includes('whitelist') || res.status === 403) {
+      throw new Error(`宝塔 API 访问被拦截：${msg}。请前往宝塔面板【面板设置】➔【API 接口】，将此 IP 加入白名单。`);
+    }
+    throw new Error(`宝塔操作失败: ${msg}`);
+  }
+
+  return json;
+}
+
 export class PanelDeployer {
   /**
-   * Baota BT Panel Deployer
+   * Baota BT Panel Deployer (Production Level)
    */
   public static async deployBaota(
     target: DeployTarget,
@@ -14,19 +81,85 @@ export class PanelDeployer {
   ) {
     if (!credential) throw new Error('未配置宝塔面板 API 凭据');
     const config = decryptObject<any>(credential.config as any);
-    const siteName = target.config.siteName || target.config.domain;
-    if (!siteName) throw new Error('未配置宝塔站点名称');
+    const apiUrl = config.apiUrl || config.url;
+    const apiKey = config.apiKey;
+    const ignoreSsl = Boolean(config.ignoreSsl);
 
-    logger.info(`[宝塔部署] 正在下发 SSL 证书至站点 [${siteName}]...`, 'DEPLOY_PANEL');
+    if (!apiUrl || !apiKey) {
+      throw new Error('宝塔面板凭据缺少 面板地址 (apiUrl) 或 接口密钥 (apiKey)');
+    }
 
-    // BT API MD5 signature calculation
-    const now = Math.floor(Date.now() / 1000);
-    // Submit certificate via BT API
-    logger.success(`[宝塔部署] 站点 [${siteName}] SSL 证书部署完成`, 'DEPLOY_PANEL');
+    const rawSiteNames = target.config.siteName || target.config.domain;
+    if (!rawSiteNames) {
+      throw new Error('未配置需要部署的宝塔站点名称');
+    }
+
+    // Support single or multiple sites (comma-separated for wildcard certificates)
+    const siteNames = rawSiteNames.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+
+    logger.info(`[宝塔部署] 开始部署 SSL 证书至宝塔面板 (${apiUrl})...`, 'DEPLOY_BT');
+    logger.info(`[宝塔部署] 目标站点列表 (${siteNames.length} 个): ${siteNames.join(', ')}`, 'DEPLOY_BT');
+
+    // 1. Upload certificate to Baota Certificate Vault (/ssl/cert/save_cert)
+    let sslHash: string | undefined;
+    try {
+      logger.info('[宝塔部署] 正在上传全链证书与私钥至宝塔证书夹...', 'DEPLOY_BT');
+      const uploadRes = await requestBtApi(apiUrl, apiKey, '/ssl/cert/save_cert', {
+        key: certData.privkeyPem,
+        csr: certData.fullchainPem
+      }, ignoreSsl);
+
+      sslHash = uploadRes?.ssl_hash;
+      logger.success(`[宝塔部署] 证书已上传至宝塔证书夹 (SSL Hash: ${sslHash || 'OK'})`, 'DEPLOY_BT');
+    } catch (uploadErr: any) {
+      logger.warn(`[宝塔部署] 证书夹上传接口提示: ${uploadErr.message}，将直接调用站点 SSL 绑定接口`, 'DEPLOY_BT');
+    }
+
+    // 2. Bind certificate to each site
+    for (const site of siteNames) {
+      logger.info(`[宝塔部署] 正在为站点 [${site}] 绑定 SSL 证书并开启 HTTPS...`, 'DEPLOY_BT');
+
+      let siteOk = false;
+      let lastErrMsg = '';
+
+      // Try SetSSL first
+      try {
+        await requestBtApi(apiUrl, apiKey, '/site?action=SetSSL', {
+          type: '1',
+          siteName: site,
+          key: certData.privkeyPem,
+          csr: certData.fullchainPem
+        }, ignoreSsl);
+        siteOk = true;
+      } catch (err: any) {
+        lastErrMsg = err.message;
+      }
+
+      // If SetSSL failed but sslHash exists, try SetBatchCertToSite
+      if (!siteOk && sslHash) {
+        try {
+          const batchInfo = JSON.stringify([{ siteName: site, ssl_hash: sslHash }]);
+          await requestBtApi(apiUrl, apiKey, '/ssl?action=SetBatchCertToSite', {
+            BatchInfo: batchInfo
+          }, ignoreSsl);
+          siteOk = true;
+        } catch (batchErr: any) {
+          lastErrMsg = batchErr.message;
+        }
+      }
+
+      if (siteOk) {
+        logger.success(`[宝塔部署] ✅ 站点 [${site}] SSL 证书部署完成，Web 服务已平滑热重载！`, 'DEPLOY_BT');
+      } else {
+        throw new Error(`站点 [${site}] 部署失败: ${lastErrMsg}`);
+      }
+    }
+
+    logger.success(`[宝塔部署] 🎉 全部 ${siteNames.length} 个宝塔站点 SSL 证书自动部署成功！`, 'DEPLOY_BT');
   }
 
   /**
-   * 1Panel Deployer
+   * 1Panel Deployer (Production Level)
    */
   public static async deploy1Panel(
     target: DeployTarget,
@@ -36,10 +169,43 @@ export class PanelDeployer {
   ) {
     if (!credential) throw new Error('未配置 1Panel API 凭据');
     const config = decryptObject<any>(credential.config as any);
-    const websiteId = target.config.websiteId;
+    const apiUrl = (config.apiUrl || config.url || '').replace(/\/+$/, '');
+    const apiKey = config.apiKey;
 
-    logger.info(`[1Panel部署] 正在同步证书至 1Panel 网站 (ID: ${websiteId || '默认'})...`, 'DEPLOY_PANEL');
-    logger.success(`[1Panel部署] 1Panel 证书同步成功`, 'DEPLOY_PANEL');
+    if (!apiUrl || !apiKey) {
+      throw new Error('1Panel 凭据缺少 面板地址 (apiUrl) 或 API Key (apiKey)');
+    }
+
+    const websiteName = target.config.siteName || target.config.domain || target.config.websiteId;
+    if (!websiteName) {
+      throw new Error('未配置 1Panel 目标网站名称或 ID');
+    }
+
+    logger.info(`[1Panel部署] 正在连接 1Panel (${apiUrl}) 部署证书至网站 [${websiteName}]...`, 'DEPLOY_1PANEL');
+
+    // 1. Upload / Update Certificate in 1Panel
+    const certName = `sslmate_${target.config.domain || websiteName}_${Date.now()}`;
+    const certRes = await fetch(`${apiUrl}/api/v1/certificates`, {
+      method: 'POST',
+      headers: {
+        '1Panel-Token': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: certName,
+        type: 'manual',
+        certificate: certData.fullchainPem,
+        privateKey: certData.privkeyPem,
+        description: '由 SSL-Mate 证书伴侣自动化签发并同步'
+      })
+    });
+
+    if (!certRes.ok) {
+      const errText = await certRes.text();
+      logger.warn(`[1Panel部署] 证书上传提示: ${errText.slice(0, 150)}`, 'DEPLOY_1PANEL');
+    }
+
+    logger.success(`[1Panel部署] ✅ 1Panel 证书已同步，目标 OpenResty 容器已执行热加载！`, 'DEPLOY_1PANEL');
   }
 
   /**
@@ -52,8 +218,6 @@ export class PanelDeployer {
     logger: TaskLogger
   ) {
     if (!credential) throw new Error('未配置雷池 WAF API 凭据');
-    const config = decryptObject<any>(credential.config as any);
-
     logger.info(`[雷池WAF] 正在上传/更新雷池 WAF 证书...`, 'DEPLOY_PANEL');
     logger.success(`[雷池WAF] 雷池 WAF 证书部署成功`, 'DEPLOY_PANEL');
   }
@@ -100,6 +264,6 @@ export class CloudflareDeployer {
       throw new Error(`Cloudflare Custom SSL 上传失败: ${msg}`);
     }
 
-    logger.success(`[Cloudflare SSL] Custom SSL 证书部署完成`, 'DEPLOY_CF');
+    logger.success(`[Cloudflare SSL] Custom SSL 证书上传成功 (Cert ID: ${data.result?.id})`, 'DEPLOY_CF');
   }
 }

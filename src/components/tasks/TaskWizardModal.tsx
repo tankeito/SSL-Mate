@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { CertTask, AcmeAccount, Credential, DeployTarget, DeployTargetType, NotifyChannel } from '../../types';
 import { api } from '../../api/client';
+import { BaotaLogo, OnePanelLogo } from '../common/BrandIcons';
 
 interface TaskWizardModalProps {
   isOpen: boolean;
@@ -126,16 +127,19 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
       type,
       name: type === 'local_file' ? '本地文件目录' :
             type === 'ssh' ? '远程 SSH 主机' :
+            type === 'bt_panel' ? '宝塔面板站点' :
+            type === 'one_panel' ? '1Panel 网站' :
             type === 'aliyun_cdn' ? '阿里云 CDN/HTTPS' :
             type === 'cloudflare' ? 'Cloudflare Custom SSL' :
-            type === 'bt_panel' ? '宝塔面板站点' : '通用 Webhook',
+            type === 'webhook' ? '通用 Webhook' : '自定义目标',
       enabled: true,
       config: {
         targetPath: type === 'ssh' ? '/etc/nginx/ssl' : '/etc/ssl/certs',
         certFileName: 'cert.pem',
         keyFileName: 'privkey.pem',
         fullchainFileName: 'fullchain.pem',
-        reloadCommand: 'nginx -s reload'
+        reloadCommand: 'nginx -s reload',
+        siteName: ''
       }
     };
     setDeployTargets([...deployTargets, newTarget]);
@@ -218,124 +222,63 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl lg:max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scaleUp">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 space-y-6 shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/20">
-              <Sparkles className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Sparkles className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                {initialTask ? '编辑证书自动化任务' : '创建自动化证书任务 (3-Step Pipeline)'}
+                {initialTask ? '编辑证书任务流水线' : '创建自动化证书任务 (3-Step Wizard)'}
               </h3>
-              <p className="text-xs text-slate-400">DNS-01 权威申请 · 多端并行部署 · 30天自动续期轮换</p>
+              <p className="text-xs text-slate-400">一键配置 ACME 签发、多目标部署与 7x24h 自动续期</p>
             </div>
           </div>
-
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Visual Pipeline Architecture Flowchart */}
-        <div className="px-4 sm:px-6 py-3.5 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800">
-          <div className="flex items-center justify-between gap-1 sm:gap-2">
-            {/* Step 1 Node */}
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className={`flex-1 flex items-center gap-2.5 p-2 sm:px-3.5 sm:py-2 rounded-2xl transition-all ${
-                step === 1 
-                  ? 'bg-white dark:bg-slate-800 shadow-sm border border-emerald-500/50 ring-2 ring-emerald-500/20' 
-                  : step > 1 
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' 
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+        {/* 3 Steps Indicator */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { num: 1, title: '1. 域名与 CA 策略', sub: '域名与 DNS-01 验证' },
+            { num: 2, title: '2. 多目标并行部署', sub: '宝塔/1Panel/SSH/CDN' },
+            { num: 3, title: '3. 续期与告警', sub: '自动守护与通道通知' }
+          ].map(s => (
+            <div
+              key={s.num}
+              onClick={() => setStep(s.num as any)}
+              className={`cursor-pointer p-3 rounded-2xl border transition-all text-left ${
+                step === s.num
+                  ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 shadow-sm'
+                  : step > s.num
+                    ? 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 text-emerald-600 dark:text-emerald-400'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-400 hover:border-slate-300'
               }`}
             >
-              <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                step === 1 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm' :
-                step > 1 ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-              }`}>
-                {step > 1 ? <Check className="w-4 h-4" /> : '1'}
+              <div className="font-bold text-xs flex items-center gap-1.5">
+                {step > s.num ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null}
+                <span>{s.title}</span>
               </div>
-              <div className="text-left min-w-0">
-                <div className="font-bold text-xs text-slate-900 dark:text-white truncate">1. 域名与 CA 签发</div>
-                <div className="text-[10px] text-slate-400 truncate hidden sm:block">DNS-01 验证 · 算法</div>
-              </div>
-            </button>
-
-            {/* Pipeline Flow Arrow 1 */}
-            <div className="flex items-center text-slate-300 dark:text-slate-600 shrink-0 px-1">
-              <span className={`text-[10px] font-mono font-bold transition-colors ${step > 1 ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>➔</span>
+              <p className="text-[11px] opacity-70 truncate mt-0.5">{s.sub}</p>
             </div>
-
-            {/* Step 2 Node */}
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className={`flex-1 flex items-center gap-2.5 p-2 sm:px-3.5 sm:py-2 rounded-2xl transition-all ${
-                step === 2 
-                  ? 'bg-white dark:bg-slate-800 shadow-sm border border-emerald-500/50 ring-2 ring-emerald-500/20' 
-                  : step > 2 
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' 
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                step === 2 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm' :
-                step > 2 ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-              }`}>
-                {step > 2 ? <Check className="w-4 h-4" /> : '2'}
-              </div>
-              <div className="text-left min-w-0">
-                <div className="font-bold text-xs text-slate-900 dark:text-white truncate">2. 多目标并行部署</div>
-                <div className="text-[10px] text-slate-400 truncate hidden sm:block">SSH · CDN · 目录</div>
-              </div>
-            </button>
-
-            {/* Pipeline Flow Arrow 2 */}
-            <div className="flex items-center text-slate-300 dark:text-slate-600 shrink-0 px-1">
-              <span className={`text-[10px] font-mono font-bold transition-colors ${step > 2 ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>➔</span>
-            </div>
-
-            {/* Step 3 Node */}
-            <button
-              type="button"
-              onClick={() => setStep(3)}
-              className={`flex-1 flex items-center gap-2.5 p-2 sm:px-3.5 sm:py-2 rounded-2xl transition-all ${
-                step === 3 
-                  ? 'bg-white dark:bg-slate-800 shadow-sm border border-emerald-500/50 ring-2 ring-emerald-500/20' 
-                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                step === 3 ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-              }`}>
-                3
-              </div>
-              <div className="text-left min-w-0">
-                <div className="font-bold text-xs text-slate-900 dark:text-white truncate">3. 续期策略与通知</div>
-                <div className="text-[10px] text-slate-400 truncate hidden sm:block">30天轮换 · 告警推送</div>
-              </div>
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Error alert */}
+        {/* Error Alert */}
         {error && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+            <X className="w-4 h-4 shrink-0" />
             <span>{error}</span>
-            <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
           </div>
         )}
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* STEP 1: Domain & ACME */}
+        {/* STEP CONTENT */}
+        <div className="space-y-4">
+          {/* STEP 1: Domains & ACME */}
           {step === 1 && (
             <div className="space-y-4">
               <div>
@@ -346,37 +289,32 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   type="text"
                   value={taskName}
                   onChange={e => setTaskName(e.target.value)}
-                  placeholder="例如: 官网主站证书 / API 泛域名证书"
-                  autoFocus
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                  placeholder="例如: 我的主站 SSL 自动化签发"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    申请域名列表 (一行一个，支持通配符 *.example.com) <span className="text-rose-500">*</span>
-                  </label>
-                  {parsedDomains.length > 0 && (
-                    <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                      已识别 {parsedDomains.length} 个域名
-                    </span>
-                  )}
-                </div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  申请域名 (Domains) <span className="text-rose-500">*</span>
+                </label>
                 <textarea
                   rows={3}
                   value={domainsInput}
                   onChange={e => setDomainsInput(e.target.value)}
-                  placeholder={`example.com\n*.example.com\napi.example.com`}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed"
+                  placeholder="example.com&#10;*.example.com&#10;api.example.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">系统将自动合并多个主域名与 SAN 泛域名至同一张证书内。</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  支持多域名证书与通配符泛域名 (如 *.ap1x.xyz)，每行一个域名或逗号隔开
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    ACME CA 证书颁发机构 <span className="text-rose-500">*</span>
+                    ACME CA 权威机构 <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={acmeAccountId}
@@ -393,7 +331,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    DNS 云厂商 API 凭据 (DNS-01 自动化验证) <span className="text-rose-500">*</span>
+                    DNS 云厂商 API 凭据 <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={dnsCredentialId}
@@ -407,9 +345,6 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  {dnsCredentials.length === 0 && (
-                    <p className="text-[11px] text-amber-500 mt-1">⚠️ 尚未添加 DNS 凭据，请在【凭据中心】添加 Cloudflare/阿里云/腾讯云 API</p>
-                  )}
                 </div>
               </div>
 
@@ -419,23 +354,22 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {[
-                    { id: 'ec256', label: 'ECC P-256', desc: '推荐 · 极速握手' },
-                    { id: 'ec384', label: 'ECC P-384', desc: '金融高强度' },
-                    { id: 'rsa2048', label: 'RSA 2048', desc: '高兼容性' },
-                    { id: 'rsa4096', label: 'RSA 4096', desc: '长密钥强安全' }
+                    { id: 'ec256', label: 'ECC P-256' },
+                    { id: 'ec384', label: 'ECC P-384' },
+                    { id: 'rsa2048', label: 'RSA 2048' },
+                    { id: 'rsa4096', label: 'RSA 4096' }
                   ].map(k => (
                     <button
                       type="button"
                       key={k.id}
                       onClick={() => setKeyType(k.id as any)}
-                      className={`p-3 rounded-2xl text-left border transition-all ${
+                      className={`p-2.5 rounded-xl text-center border transition-all ${
                         keyType === k.id
-                          ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/20'
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500'
                           : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                       }`}
                     >
                       <div className="font-bold text-xs font-mono">{k.label}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{k.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -452,15 +386,23 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <p className="text-xs text-slate-400">证书签发成功后，自动并行分发至以下节点并执行平滑重载</p>
                 </div>
 
-                {/* Add Target Buttons (1 Line) */}
-                <div className="flex items-center gap-2 overflow-x-auto flex-nowrap shrink-0">
+                {/* Add Target Buttons */}
+                <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap shrink-0">
                   <button
                     type="button"
-                    onClick={() => addDeployTarget('local_file')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-emerald-600 transition-all shrink-0 whitespace-nowrap"
+                    onClick={() => addDeployTarget('bt_panel')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 transition-all shrink-0 whitespace-nowrap"
                   >
-                    <FolderDown className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>+ 本地目录</span>
+                    <BaotaLogo className="w-3.5 h-3.5" size={14} />
+                    <span>+ 宝塔面板</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addDeployTarget('one_panel')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 text-xs font-bold text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/60 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <OnePanelLogo className="w-3.5 h-3.5" size={14} />
+                    <span>+ 1Panel</span>
                   </button>
                   <button
                     type="button"
@@ -472,11 +414,19 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   </button>
                   <button
                     type="button"
+                    onClick={() => addDeployTarget('local_file')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all shrink-0 whitespace-nowrap"
+                  >
+                    <FolderDown className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>+ 本地目录</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => addDeployTarget('aliyun_cdn')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 transition-all shrink-0 whitespace-nowrap"
                   >
                     <Cloud className="w-3.5 h-3.5 text-amber-600" />
-                    <span>+ 阿里云CDN</span>
+                    <span>+ CDN</span>
                   </button>
                   <button
                     type="button"
@@ -490,148 +440,201 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
               </div>
 
               {/* Targets List */}
-              {deployTargets.length === 0 ? (
-                <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-2">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">尚未添加任何部署目标</p>
-                  <p className="text-xs text-slate-400">（如果仅需生成证书并在平台内统一下载归档，可直接点击下一步跳过此配置）</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {deployTargets.map(target => (
-                    <div key={target.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 uppercase">
-                            {target.type}
-                          </span>
-                          <input
-                            type="text"
-                            value={target.name}
-                            onChange={e => updateDeployTarget(target.id, { name: e.target.value })}
-                            className="text-xs sm:text-sm font-semibold bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:outline-none"
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removeDeployTarget(target.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+              <div className="space-y-3">
+                {deployTargets.map(target => (
+                  <div key={target.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 uppercase">
+                          {target.type}
+                        </span>
+                        <input
+                          type="text"
+                          value={target.name}
+                          onChange={e => updateDeployTarget(target.id, { name: e.target.value })}
+                          className="text-xs sm:text-sm font-semibold bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:outline-none"
+                        />
                       </div>
 
-                      {/* Config details according to type */}
-                      {target.type === 'local_file' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <label className="block text-slate-500 mb-1">本地目标路径</label>
-                            <input
-                              type="text"
-                              value={target.config.targetPath || ''}
-                              onChange={e => updateDeployTargetConfig(target.id, { targetPath: e.target.value })}
-                              placeholder="/etc/nginx/ssl"
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-slate-500 mb-1">写入后重载命令 (可选)</label>
-                            <input
-                              type="text"
-                              value={target.config.reloadCommand || ''}
-                              onChange={e => updateDeployTargetConfig(target.id, { reloadCommand: e.target.value })}
-                              placeholder="systemctl reload nginx"
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {target.type === 'ssh' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <label className="block text-slate-500 mb-1">选择 SSH 主机凭据</label>
-                            <select
-                              value={target.credentialId || ''}
-                              onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
-                            >
-                              <option value="">-- 请选择 SSH 凭据 --</option>
-                              {sshCredentials.map(s => (
-                                <option key={s.id} value={s.id}>{s.name} ({s.config.host})</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-slate-500 mb-1">远程目录</label>
-                            <input
-                              type="text"
-                              value={target.config.targetPath || '/etc/nginx/ssl'}
-                              onChange={e => updateDeployTargetConfig(target.id, { targetPath: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-slate-500 mb-1">远程重载命令</label>
-                            <input
-                              type="text"
-                              value={target.config.reloadCommand || 'nginx -s reload'}
-                              onChange={e => updateDeployTargetConfig(target.id, { reloadCommand: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {target.type === 'aliyun_cdn' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <label className="block text-slate-500 mb-1">阿里云 API 凭据</label>
-                            <select
-                              value={target.credentialId || ''}
-                              onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
-                            >
-                              <option value="">-- 选择阿里云凭据 --</option>
-                              {credentials.filter(c => c.type === 'aliyun_cloud' || c.type === 'dns_aliyun').map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-slate-500 mb-1">CDN 加速域名</label>
-                            <input
-                              type="text"
-                              value={target.config.domain || ''}
-                              onChange={e => updateDeployTargetConfig(target.id, { domain: e.target.value })}
-                              placeholder="cdn.example.com"
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {target.type === 'webhook' && (
-                        <div className="space-y-2 text-xs">
-                          <div>
-                            <label className="block text-slate-500 mb-1">Webhook 推送 URL</label>
-                            <input
-                              type="text"
-                              value={target.config.webhookUrl || ''}
-                              onChange={e => updateDeployTargetConfig(target.id, { webhookUrl: e.target.value })}
-                              placeholder="https://api.example.com/webhooks/ssl"
-                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
-                            />
-                          </div>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeDeployTarget(target.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    {/* Baota BT Panel Config Form */}
+                    {target.type === 'bt_panel' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">选择宝塔面板凭据</label>
+                          <select
+                            value={target.credentialId || ''}
+                            onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="">-- 选择宝塔面板凭据 --</option>
+                            {credentials.filter(c => c.type === 'bt_panel').map(c => (
+                              <option key={c.id} value={c.id}>{c.name} ({c.config?.apiUrl || c.config?.url})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">
+                            宝塔目标站点名称 (多站逗号隔开)
+                          </label>
+                          <input
+                            type="text"
+                            value={target.config.siteName || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { siteName: e.target.value })}
+                            placeholder="如: gemini.ap1x.xyz, api.ap1x.xyz"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            泛域名证书可填写多个站点，自动批量绑定并执行 Nginx 平滑热重载
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 1Panel Config Form */}
+                    {target.type === 'one_panel' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">选择 1Panel 凭据</label>
+                          <select
+                            value={target.credentialId || ''}
+                            onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="">-- 选择 1Panel 凭据 --</option>
+                            {credentials.filter(c => c.type === 'one_panel').map(c => (
+                              <option key={c.id} value={c.id}>{c.name} ({c.config?.apiUrl || c.config?.url})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">1Panel 目标网站名称/域名</label>
+                          <input
+                            type="text"
+                            value={target.config.siteName || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { siteName: e.target.value })}
+                            placeholder="如: gemini.ap1x.xyz"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Config details according to type */}
+                    {target.type === 'local_file' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1">本地目标路径</label>
+                          <input
+                            type="text"
+                            value={target.config.targetPath || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { targetPath: e.target.value })}
+                            placeholder="/etc/nginx/ssl"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1">重载命令 (可选)</label>
+                          <input
+                            type="text"
+                            value={target.config.reloadCommand || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { reloadCommand: e.target.value })}
+                            placeholder="systemctl reload nginx"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {target.type === 'ssh' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1">选择 SSH 主机凭据</label>
+                          <select
+                            value={target.credentialId || ''}
+                            onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="">-- 请选择 SSH 凭据 --</option>
+                            {sshCredentials.map(s => (
+                              <option key={s.id} value={s.id}>{s.name} ({s.config.host})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1">远程目录</label>
+                          <input
+                            type="text"
+                            value={target.config.targetPath || '/etc/nginx/ssl'}
+                            onChange={e => updateDeployTargetConfig(target.id, { targetPath: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1">远程重载命令</label>
+                          <input
+                            type="text"
+                            value={target.config.reloadCommand || 'nginx -s reload'}
+                            onChange={e => updateDeployTargetConfig(target.id, { reloadCommand: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {target.type === 'aliyun_cdn' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1">阿里云 API 凭据</label>
+                          <select
+                            value={target.credentialId || ''}
+                            onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="">-- 选择阿里云凭据 --</option>
+                            {credentials.filter(c => c.type === 'aliyun_cloud' || c.type === 'dns_aliyun').map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1">CDN 加速域名</label>
+                          <input
+                            type="text"
+                            value={target.config.domain || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { domain: e.target.value })}
+                            placeholder="cdn.example.com"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {target.type === 'webhook' && (
+                      <div className="space-y-2 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1">Webhook 推送 URL</label>
+                          <input
+                            type="text"
+                            value={target.config.webhookUrl || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { webhookUrl: e.target.value })}
+                            placeholder="https://api.example.com/webhooks/ssl"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

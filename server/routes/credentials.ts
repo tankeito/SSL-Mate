@@ -172,10 +172,86 @@ router.post('/test', async (req: AuthenticatedRequest, res: Response) => {
       return res.json({ success: true, message: '✅ Cloudflare API 凭据验证成功，已连接 DNS 服务！' });
     }
 
+    if (type === 'bt_panel') {
+      const { requestBtApi } = await import('../services/deployers/panel.js');
+      const apiUrl = config.apiUrl || config.url;
+      const apiKey = config.apiKey;
+      const ignoreSsl = Boolean(config.ignoreSsl);
+      if (!apiUrl || !apiKey) {
+        throw new Error('请输入宝塔面板地址 (apiUrl) 与 接口密钥 (apiKey)');
+      }
+      const data = await requestBtApi(apiUrl, apiKey, '/data?action=getData&table=sites', {}, ignoreSsl);
+      const siteList = Array.isArray(data?.data) ? data.data : [];
+      const sampleSites = siteList.slice(0, 3).map((s: any) => s.name).join(', ');
+      return res.json({ 
+        success: true, 
+        message: `✅ 宝塔面板 API 连接成功！已检测到 ${siteList.length} 个托管站点 ${sampleSites ? `(${sampleSites}...)` : ''}`,
+        sites: siteList.map((s: any) => ({ name: s.name, id: s.id }))
+      });
+    }
+
+    if (type === 'one_panel') {
+      const apiUrl = (config.apiUrl || config.url || '').replace(/\/+$/, '');
+      const apiKey = config.apiKey;
+      if (!apiUrl || !apiKey) {
+        throw new Error('请输入 1Panel 面板地址与 API Key');
+      }
+      const res1p = await fetch(`${apiUrl}/api/v1/websites/search`, {
+        method: 'POST',
+        headers: {
+          '1Panel-Token': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ page: 1, pageSize: 20 })
+      });
+      if (!res1p.ok) {
+        throw new Error(`1Panel API 响应异常: ${res1p.statusText}`);
+      }
+      const data1p = await res1p.json() as any;
+      const items = data1p?.data?.items || [];
+      return res.json({
+        success: true,
+        message: `✅ 1Panel 运维面板连接成功！已检测到 ${items.length} 个网站项目`,
+        sites: items.map((s: any) => ({ name: s.primaryDomain || s.name, id: s.id }))
+      });
+    }
+
     // Default mock response for other platforms
     return res.json({ success: true, message: '凭据参数格式验证通过' });
   } catch (err: any) {
     return res.status(400).json({ error: `凭据校验失败: ${err.message}` });
+  }
+});
+
+/**
+ * Get Sites associated with a panel credential
+ */
+router.get('/:id/sites', async (req: AuthenticatedRequest, res: Response) => {
+  const cred = db.findCredentialById(String(req.params.id));
+  if (!cred) return res.status(404).json({ error: '凭据不存在' });
+  const config = decryptObject<any>(cred.config as any);
+
+  try {
+    if (cred.type === 'bt_panel') {
+      const { requestBtApi } = await import('../services/deployers/panel.js');
+      const data = await requestBtApi(config.apiUrl || config.url, config.apiKey, '/data?action=getData&table=sites', {}, Boolean(config.ignoreSsl));
+      const sites = Array.isArray(data?.data) ? data.data.map((s: any) => s.name) : [];
+      return res.json({ sites });
+    }
+    if (cred.type === 'one_panel') {
+      const apiUrl = (config.apiUrl || config.url || '').replace(/\/+$/, '');
+      const res1p = await fetch(`${apiUrl}/api/v1/websites/search`, {
+        method: 'POST',
+        headers: { '1Panel-Token': config.apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 1, pageSize: 50 })
+      });
+      const data1p = await res1p.json() as any;
+      const sites = (data1p?.data?.items || []).map((s: any) => s.primaryDomain || s.name);
+      return res.json({ sites });
+    }
+    return res.json({ sites: [] });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
   }
 });
 

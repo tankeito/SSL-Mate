@@ -28,10 +28,12 @@ import {
   AliyunLogo, 
   TencentCloudLogo, 
   HuaweiCloudLogo, 
-  SSHHostLogo 
+  SSHHostLogo,
+  BaotaLogo,
+  OnePanelLogo
 } from '../common/BrandIcons';
 
-type CredCategoryFilter = 'all' | 'dns' | 'ssh' | 'other';
+type CredCategoryFilter = 'all' | 'dns' | 'ssh' | 'panel' | 'other';
 
 export const CredentialsView: React.FC = () => {
   const { confirm, toast } = useModal();
@@ -65,6 +67,15 @@ export const CredentialsView: React.FC = () => {
   const [sshUsername, setSshUsername] = useState('root');
   const [sshPassword, setSshPassword] = useState('');
   const [sshPrivateKey, setSshPrivateKey] = useState('');
+
+  // Baota Panel
+  const [btApiUrl, setBtApiUrl] = useState('');
+  const [btApiKey, setBtApiKey] = useState('');
+  const [btIgnoreSsl, setBtIgnoreSsl] = useState(false);
+
+  // 1Panel
+  const [onePanelUrl, setOnePanelUrl] = useState('');
+  const [onePanelApiKey, setOnePanelApiKey] = useState('');
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -112,6 +123,11 @@ export const CredentialsView: React.FC = () => {
     setSshUsername('root');
     setSshPassword('');
     setSshPrivateKey('');
+    setBtApiUrl('http://192.168.1.100:8888');
+    setBtApiKey('');
+    setBtIgnoreSsl(false);
+    setOnePanelUrl('http://192.168.1.100:10000');
+    setOnePanelApiKey('');
     setTestResult(null);
     setModalOpen(true);
   };
@@ -134,6 +150,11 @@ export const CredentialsView: React.FC = () => {
     setSshUsername(cfg.username || 'root');
     setSshPassword(cfg.password || '');
     setSshPrivateKey(cfg.privateKey || '');
+    setBtApiUrl(cfg.apiUrl || cfg.url || '');
+    setBtApiKey(cfg.apiKey || '');
+    setBtIgnoreSsl(Boolean(cfg.ignoreSsl));
+    setOnePanelUrl(cfg.apiUrl || cfg.url || '');
+    setOnePanelApiKey(cfg.apiKey || '');
     setTestResult(null);
     setModalOpen(true);
   };
@@ -151,12 +172,16 @@ export const CredentialsView: React.FC = () => {
         config = { secretId: txSecretId, secretKey: txSecretKey };
       } else if (credType === 'ssh_host') {
         config = { host: sshHost, port: sshPort, username: sshUsername, password: sshPassword, privateKey: sshPrivateKey };
+      } else if (credType === 'bt_panel') {
+        config = { apiUrl: btApiUrl, apiKey: btApiKey, ignoreSsl: btIgnoreSsl };
+      } else if (credType === 'one_panel') {
+        config = { apiUrl: onePanelUrl, apiKey: onePanelApiKey };
       }
 
       const res = await api.testCredential({ type: credType, config });
       setTestResult(res);
       if (res.success) {
-        toast.success('连接连通性测试成功！');
+        toast.success(res.message || '连接连通性测试成功！');
       } else {
         toast.error(`连通性测试失败: ${res.message}`);
       }
@@ -183,6 +208,10 @@ export const CredentialsView: React.FC = () => {
       config = { secretId: txSecretId, secretKey: txSecretKey };
     } else if (credType === 'ssh_host') {
       config = { host: sshHost, port: sshPort, username: sshUsername, password: sshPassword, privateKey: sshPrivateKey };
+    } else if (credType === 'bt_panel') {
+      config = { apiUrl: btApiUrl, apiKey: btApiKey, ignoreSsl: btIgnoreSsl };
+    } else if (credType === 'one_panel') {
+      config = { apiUrl: onePanelUrl, apiKey: onePanelApiKey };
     }
 
     try {
@@ -240,7 +269,8 @@ export const CredentialsView: React.FC = () => {
     if (categoryFilter === 'all') return true;
     if (categoryFilter === 'dns') return c.type.startsWith('dns_');
     if (categoryFilter === 'ssh') return c.type === 'ssh_host';
-    if (categoryFilter === 'other') return !c.type.startsWith('dns_') && c.type !== 'ssh_host';
+    if (categoryFilter === 'panel') return c.type === 'bt_panel' || c.type === 'one_panel';
+    if (categoryFilter === 'other') return !c.type.startsWith('dns_') && c.type !== 'ssh_host' && c.type !== 'bt_panel' && c.type !== 'one_panel';
     return true;
   });
 
@@ -248,7 +278,8 @@ export const CredentialsView: React.FC = () => {
   const countAll = credentials.length;
   const countDns = credentials.filter(c => c.type.startsWith('dns_')).length;
   const countSsh = credentials.filter(c => c.type === 'ssh_host').length;
-  const countOther = countAll - countDns - countSsh;
+  const countPanel = credentials.filter(c => c.type === 'bt_panel' || c.type === 'one_panel').length;
+  const countOther = countAll - countDns - countSsh - countPanel;
 
   // Pagination
   const totalPages = Math.ceil(filteredCredentials.length / pageSize) || 1;
@@ -291,9 +322,23 @@ export const CredentialsView: React.FC = () => {
       case 'ssh_host':
         return {
           label: 'SSH 远程主机',
-          badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+          badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700',
           LogoComponent: SSHHostLogo,
           typeText: '远程部署'
+        };
+      case 'bt_panel':
+        return {
+          label: '宝塔面板 (BT Panel)',
+          badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+          LogoComponent: BaotaLogo,
+          typeText: '面板自动化部署'
+        };
+      case 'one_panel':
+        return {
+          label: '1Panel 运维面板',
+          badge: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/80 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800/60',
+          LogoComponent: OnePanelLogo,
+          typeText: '容器热载部署'
         };
       default:
         return {
@@ -366,6 +411,17 @@ export const CredentialsView: React.FC = () => {
             >
               <Cloud className="w-3.5 h-3.5" />
               <span>DNS 验证云厂商 ({countDns})</span>
+            </button>
+            <button
+              onClick={() => setCategoryFilter('panel')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+                categoryFilter === 'panel'
+                  ? 'bg-teal-600 text-white font-bold shadow-sm'
+                  : 'text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/40'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>宝塔 / 1Panel 面板 ({countPanel})</span>
             </button>
             <button
               onClick={() => setCategoryFilter('ssh')}
@@ -639,15 +695,25 @@ export const CredentialsView: React.FC = () => {
                       if (newType === 'dns_cloudflare') setCredName('Cloudflare');
                       else if (newType === 'dns_aliyun') setCredName('阿里云 DNS');
                       else if (newType === 'dns_tencent') setCredName('腾讯云 DNSPod');
+                      else if (newType === 'bt_panel') setCredName('宝塔面板');
+                      else if (newType === 'one_panel') setCredName('1Panel 面板');
                       else if (newType === 'ssh_host') setCredName('SSH 主机');
                     }
                   }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-medium text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value="dns_cloudflare">Cloudflare</option>
-                  <option value="dns_aliyun">阿里云 DNS (AccessKey)</option>
-                  <option value="dns_tencent">腾讯云 DNSPod (SecretId/SecretKey)</option>
-                  <option value="ssh_host">SSH 远程主机凭据</option>
+                  <optgroup label="DNS 验证提供商 (DNS-01)">
+                    <option value="dns_cloudflare">Cloudflare</option>
+                    <option value="dns_aliyun">阿里云 DNS (AccessKey)</option>
+                    <option value="dns_tencent">腾讯云 DNSPod (SecretId/SecretKey)</option>
+                  </optgroup>
+                  <optgroup label="自动化部署运维面板">
+                    <option value="bt_panel">宝塔面板 (BT Panel / aaPanel)</option>
+                    <option value="one_panel">1Panel 运维面板 (OpenResty)</option>
+                  </optgroup>
+                  <optgroup label="远程主机部署">
+                    <option value="ssh_host">SSH 远程主机凭据</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -681,6 +747,93 @@ export const CredentialsView: React.FC = () => {
                     />
                     <p className="text-[11px] text-slate-400 mt-1">
                       请勿使用 Global API Key（请在 Cloudflare 控制台创建具有 Zone.DNS.Edit 权限的 API 令牌）
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Baota BT Panel Config */}
+              {credType === 'bt_panel' && (
+                <div className="space-y-3.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">宝塔面板 (BT Panel / aaPanel) API 配置</span>
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">
+                      <span className="text-rose-500">*</span> 面板访问地址 (URL)
+                    </label>
+                    <input
+                      type="url"
+                      value={btApiUrl}
+                      onChange={e => setBtApiUrl(e.target.value)}
+                      placeholder="http://192.168.1.100:8888"
+                      required
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      支持内网/公网 IP 或域名，带端口号（如 http://192.168.1.100:8888 或 https://bt.example.com:8888）
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">
+                      <span className="text-rose-500">*</span> API 接口密钥 (Token)
+                    </label>
+                    <input
+                      type="password"
+                      value={btApiKey}
+                      onChange={e => setBtApiKey(e.target.value)}
+                      placeholder="32位宝塔接口密钥"
+                      required
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      请在宝塔面板【面板设置】➔【API 接口】中开启并获取（<span className="text-amber-500 font-bold">务必将 SSL-Mate 服务器 IP 加入白名单</span>）
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={btIgnoreSsl}
+                      onChange={e => setBtIgnoreSsl(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-slate-600 dark:text-slate-400 text-xs">忽略自签名 HTTPS 证书验证 (自签证书面板建议勾选)</span>
+                  </label>
+                </div>
+              )}
+
+              {/* 1Panel Config */}
+              {credType === 'one_panel' && (
+                <div className="space-y-3.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">1Panel 运维面板 API 配置</span>
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">
+                      <span className="text-rose-500">*</span> 1Panel 面板访问地址 (URL)
+                    </label>
+                    <input
+                      type="url"
+                      value={onePanelUrl}
+                      onChange={e => setOnePanelUrl(e.target.value)}
+                      placeholder="http://192.168.1.100:10000"
+                      required
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-bold">
+                      <span className="text-rose-500">*</span> API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={onePanelApiKey}
+                      onChange={e => setOnePanelApiKey(e.target.value)}
+                      placeholder="1Panel API 密钥"
+                      required
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      请在 1Panel【面板设置】➔【API 接口】中生成并获取 API Key
                     </p>
                   </div>
                 </div>

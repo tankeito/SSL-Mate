@@ -128,3 +128,59 @@ export const SSHHostLogo: React.FC<IconProps> = ({ className = "w-5 h-5", size =
     <line x1="14" y1="21" x2="19" y2="21" stroke="#38BDF8" strokeWidth="1.8" strokeLinecap="round" />
   </svg>
 );
+
+/**
+ * Official Baota / 宝塔面板 (aaPanel / BT Panel) Logo (SVG)
+ */
+export const BaotaLogo: React.FC<IconProps> = ({ className = "w-5 h-5", size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 32 32" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect width="32" height="32" rx="7" fill="#20A53A" />
+    {/* Pagoda / 宝塔 multi-tier tower vector */}
+    <path d="M16 5l3 3.5h-6L16 5z" fill="#FFFFFF" />
+    <path d="M11 9.5h10l1.2 2.5H9.8L11 9.5z" fill="#FFFFFF" />
+    <path d="M9 13h14l1.5 3H7.5L9 13z" fill="#FFFFFF" />
+    <path d="M7 17h18l1.8 3.5H5.2L7 17z" fill="#FFFFFF" />
+    <rect x="13.5" y="21.5" width="5" height="5.5" rx="1" fill="#FFFFFF" />
+    <rect x="7" y="24" width="4.5" height="3" rx="0.5" fill="#FFFFFF" />
+    <rect x="20.5" y="24" width="4.5" height="3" rx="0.5" fill="#FFFFFF" />
+  </svg>
+);
+
+/**
+ * Official 1Panel 运维面板 Brand Logo (SVG)
+ */
+export const OnePanelLogo: React.FC<IconProps> = ({ className = "w-5 h-5", size = 20 }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 32 32" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <rect width="32" height="32" rx="7" fill="#005BFF" />
+    {/* 1Panel Geometric Logo Cube */}
+    <path 
+      d="M16 6.5l9 5.2v10.4l-9 5.2-9-5.2V11.7l9-5.2z" 
+      stroke="#FFFFFF" 
+      strokeWidth="2" 
+      strokeLinejoin="round" 
+    />
+    <path 
+      d="M16 6.5v10.4l9-5.2M16 16.9l-9-5.2M16 16.9v10.4" 
+      stroke="#FFFFFF" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    {/* Digit 1 Accent */}
+    <circle cx="16" cy="16.9" r="2.2" fill="#00D8FF" />
+  </svg>
+);
