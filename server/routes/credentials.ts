@@ -191,7 +191,13 @@ router.post('/test', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     if (type === 'one_panel') {
-      const apiUrl = (config.apiUrl || config.url || '').replace(/\/+$/, '');
+      let apiUrl = (config.apiUrl || config.url || '').trim();
+      try {
+        const parsed = new URL(apiUrl);
+        apiUrl = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        apiUrl = apiUrl.replace(/\/+$/, '');
+      }
       const apiKey = config.apiKey;
       if (!apiUrl || !apiKey) {
         throw new Error('请输入 1Panel 面板地址与 API Key');
@@ -239,7 +245,13 @@ router.get('/:id/sites', async (req: AuthenticatedRequest, res: Response) => {
       return res.json({ sites });
     }
     if (cred.type === 'one_panel') {
-      const apiUrl = (config.apiUrl || config.url || '').replace(/\/+$/, '');
+      let apiUrl = (config.apiUrl || config.url || '').trim();
+      try {
+        const parsed = new URL(apiUrl);
+        apiUrl = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        apiUrl = apiUrl.replace(/\/+$/, '');
+      }
       const res1p = await fetch(`${apiUrl}/api/v1/websites/search`, {
         method: 'POST',
         headers: { '1Panel-Token': config.apiKey, 'Content-Type': 'application/json' },

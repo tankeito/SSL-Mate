@@ -1,3 +1,5 @@
+import http from 'http';
+import https from 'https';
 import crypto from 'crypto';
 import { DeployTarget, Credential } from '../../db/schema.js';
 import { decryptObject } from '../crypto.js';
@@ -14,7 +16,7 @@ function getBtAuth(apiKey: string) {
 }
 
 /**
- * Send HTTP request to Baota Panel API with IP whitelist detection
+ * Send HTTP/HTTPS request to Baota Panel API with IP whitelist detection & URL sanitization
  */
 export async function requestBtApi(
   baseUrl: string,
@@ -23,44 +25,80 @@ export async function requestBtApi(
   params: Record<string, string> = {},
   ignoreSsl: boolean = false
 ): Promise<any> {
-  const cleanBase = baseUrl.replace(/\/+$/, '');
+  // 1. Sanitize baseUrl: strip security entrance subpath like /cf2634c5 or /login
+  let cleanOrigin = baseUrl.trim();
+  try {
+    const parsed = new URL(cleanOrigin);
+    cleanOrigin = `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    cleanOrigin = baseUrl.replace(/\/+$/, '');
+  }
+
   const auth = getBtAuth(apiKey);
   const body = new URLSearchParams({
     ...auth,
     ...params
   });
 
-  const url = `${cleanBase}${path.startsWith('/') ? path : `/${path}`}`;
-  
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'SSL-Mate-Deployer/1.0'
-      },
-      body: body.toString()
-    });
-  } catch (err: any) {
-    throw new Error(`无法连接宝塔面板 (${cleanBase}): ${err.message}`);
-  }
+  const fullUrl = `${cleanOrigin}${path.startsWith('/') ? path : `/${path}`}`;
+  const urlObj = new URL(fullUrl);
+  const isHttps = urlObj.protocol === 'https:';
+  const postData = body.toString();
 
-  const rawText = await res.text();
+  const options: https.RequestOptions = {
+    hostname: urlObj.hostname,
+    port: urlObj.port || (isHttps ? 443 : 80),
+    path: `${urlObj.pathname}${urlObj.search}`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': Buffer.byteLength(postData),
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+    },
+    rejectUnauthorized: !ignoreSsl,
+    timeout: 15000
+  };
+
+  const responseText = await new Promise<string>((resolve, reject) => {
+    const client = isHttps ? https : http;
+    const req = client.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 403) {
+          return reject(new Error(`宝塔 API 访问被拦截 (403)：调用方 IP 未在宝塔 API 白名单内。请前往宝塔面板【面板设置】➔【API 接口】，将 SSL-Mate 服务器 IP 加入白名单。\n${data.slice(0, 150)}`));
+        }
+        resolve(data);
+      });
+    });
+
+    req.on('error', err => {
+      reject(new Error(`无法连接宝塔面板 (${cleanOrigin}): ${err.message}`));
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`连接宝塔面板超时 (${cleanOrigin}, 15s)`));
+    });
+
+    req.write(postData);
+    req.end();
+  });
+
   let json: any;
   try {
-    json = JSON.parse(rawText);
+    json = JSON.parse(responseText);
   } catch (e) {
-    if (res.status === 403 || rawText.includes('IP') || rawText.includes('whitelist') || rawText.includes('白名单')) {
-      throw new Error(`宝塔 API 访问被拦截 (403)：调用方 IP 未在宝塔 API 白名单内。请前往宝塔面板【面板设置】➔【API 接口】，将 SSL-Mate 运行服务器 IP 添加到白名单。`);
+    if (responseText.includes('IP') || responseText.includes('whitelist') || responseText.includes('白名单') || responseText.includes('校验失败')) {
+      throw new Error(`宝塔 API 访问被拦截：调用方 IP 未在宝塔 API 白名单内。请前往宝塔面板【面板设置】➔【API 接口】，将 SSL-Mate 运行服务器 IP 添加到白名单。`);
     }
-    throw new Error(`宝塔 API 返回非 JSON 响应: ${rawText.slice(0, 200)}`);
+    throw new Error(`宝塔 API 返回非 JSON 响应: ${responseText.slice(0, 200)}`);
   }
 
   // Check IP whitelist error in JSON response
   if (json && json.status === false) {
     const msg = String(json.msg || '');
-    if (msg.includes('IP') || msg.includes('白名单') || msg.includes('whitelist') || res.status === 403) {
+    if (msg.includes('IP') || msg.includes('白名单') || msg.includes('whitelist')) {
       throw new Error(`宝塔 API 访问被拦截：${msg}。请前往宝塔面板【面板设置】➔【API 接口】，将此 IP 加入白名单。`);
     }
     throw new Error(`宝塔操作失败: ${msg}`);
