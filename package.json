@@ -1,6 +1,7 @@
 {
   "name": "ssl-mate",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "SSL-Mate (证书伴侣) - 轻量级、极简、企业级全自动 SSL 证书生命周期管理平台与 AuthMate OIDC SSO 集成",
   "type": "module",
   "scripts": {
