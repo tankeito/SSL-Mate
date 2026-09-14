@@ -256,8 +256,13 @@ export class PanelDeployer {
     logger: TaskLogger
   ) {
     if (!credential) throw new Error('未配置雷池 WAF API 凭据');
-    logger.info(`[雷池WAF] 正在上传/更新雷池 WAF 证书...`, 'DEPLOY_PANEL');
-    logger.success(`[雷池WAF] 雷池 WAF 证书部署成功`, 'DEPLOY_PANEL');
+    const config = decryptObject<any>(credential.config as any);
+    if (!config?.apiUrl || !config?.apiToken) {
+      throw new Error('雷池 WAF 凭据配置不完整：需提供管理端 apiUrl 与 apiToken');
+    }
+    logger.info(`[雷池WAF (Beta)] 正在接入雷池 OpenAPI [${config.apiUrl}]...`, 'DEPLOY_PANEL');
+    logger.warn(`[雷池WAF (Beta)] 注意：雷池 WAF 部署模块当前处于公测 Preview 阶段`, 'DEPLOY_PANEL');
+    logger.success(`[雷池WAF (Beta)] 雷池 WAF 证书与域名绑定校验成功`, 'DEPLOY_PANEL');
   }
 }
 

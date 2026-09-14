@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database.js';
 import { Credential, CredentialType } from '../db/schema.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { encryptObject, decryptObject, maskSecret } from '../services/crypto.js';
 import { CloudflareDnsSolver } from '../services/acme/dns-providers/cloudflare.js';
 
@@ -48,7 +48,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Create Credential
  */
-router.post('/', (req: AuthenticatedRequest, res: Response) => {
+router.post('/', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const { name, type, config, remark } = req.body;
 
   if (!name || !type || !config) {
@@ -81,7 +81,7 @@ router.post('/', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Update Credential
  */
-router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const cred = db.findCredentialById(String(req.params.id));
   if (!cred) {
     return res.status(404).json({ error: '凭据不存在' });
@@ -126,7 +126,7 @@ router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Delete Credential
  */
-router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const success = db.deleteCredential(String(req.params.id));
   if (!success) {
     return res.status(404).json({ error: '凭据不存在' });
@@ -137,7 +137,7 @@ router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Test Credential Connectivity
  */
-router.post('/test', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/test', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const { type, config } = req.body;
 
   try {

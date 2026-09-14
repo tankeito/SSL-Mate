@@ -23,10 +23,76 @@ export class SchedulerService {
       await DomainMonitorService.checkAll();
     });
 
+    // Check and recover interrupted tasks on boot
+    this.recoverInterruptedTasks().catch(err => {
+      console.error('[Scheduler] 恢复中断任务异常:', err);
+    });
+
     // Also run an initial lightweight health scan
     setTimeout(async () => {
       await DomainMonitorService.checkAll();
     }, 5000);
+  }
+
+  /**
+   * Check for interrupted renewing tasks caused by service reboot or crash,
+   * recover their execution states, alert administrators, and re-enqueue if autoRenew is enabled.
+   */
+  public static async recoverInterruptedTasks() {
+    const tasks = db.getTasks();
+    const interruptedTasks = tasks.filter(t => t.status === 'renewing' || t.lastRunStatus === 'running');
+
+    if (interruptedTasks.length === 0) {
+      return;
+    }
+
+    console.log(`[Scheduler] 🔍 检测到 ${interruptedTasks.length} 个服务重启前处于运行中的中断任务，启动自愈容灾恢复机制...`);
+
+    for (const task of interruptedTasks) {
+      const interruptedStage = task.stage || 'INIT';
+      console.warn(`[Scheduler] ⚠️ 发现中断任务 [${task.name}] (ID: ${task.id}, 中断阶段: ${interruptedStage})`);
+
+      // 1. Close any hanging execution logs
+      const hangingLogs = db.getExecutionLogs(task.id).filter(l => l.status === 'running');
+      for (const hLog of hangingLogs) {
+        hLog.status = 'failed';
+        hLog.stage = 'FAILED';
+        hLog.errorMessage = `服务异常重启导致任务中断于 [${interruptedStage}] 阶段`;
+        hLog.finishedAt = new Date().toISOString();
+        db.updateExecutionLog(hLog);
+      }
+
+      // 2. Dispatch failure notification alert if channels configured
+      if (task.notifyChannelIds && task.notifyChannelIds.length > 0) {
+        NotificationService.dispatch(task.notifyChannelIds, {
+          event: 'renew_failed',
+          taskName: task.name,
+          domains: task.domains,
+          errorMessage: `服务重启导致任务中断于 [${interruptedStage}] 阶段，调度器已触发自愈排队处理`
+        });
+      }
+
+      // 3. Auto recover or reset state
+      if (task.autoRenew) {
+        task.status = 'pending';
+        task.lastRunStatus = 'failed';
+        task.lastRunMessage = `服务中断于 [${interruptedStage}] 阶段，已安排自愈重试`;
+        db.upsertTask(task);
+
+        console.log(`[Scheduler] 🔄 任务 [${task.name}] 开启了自动续期，安排 5 秒后自动重新触发签发...`);
+        setTimeout(() => {
+          TaskOrchestrator.executeTask(task.id, 'auto_cron').catch(err => {
+            console.error(`[Scheduler] 任务 [${task.name}] 自愈重试失败:`, err);
+          });
+        }, 5000);
+      } else {
+        task.status = 'error';
+        task.lastRunStatus = 'failed';
+        task.lastRunMessage = `服务异常重启中断于 [${interruptedStage}] 阶段，请手动重新触发`;
+        db.upsertTask(task);
+        console.log(`[Scheduler] ℹ️ 任务 [${task.name}] 为手动模式，已重置状态解除锁定`);
+      }
+    }
   }
 
   public static async runAutoRenewalCheck() {
@@ -51,11 +117,8 @@ export class SchedulerService {
           const expiresTime = new Date(cert.expiresAt).getTime();
           const diffDays = Math.floor((expiresTime - now) / (1000 * 60 * 60 * 24));
 
-          if (diffDays <= renewDaysThreshold) {
-            needRenew = true;
-            reason = `证书剩余有效期为 ${diffDays} 天 (阈值: <= ${renewDaysThreshold} 天)`;
-          } else if (diffDays <= 7) {
-            // Expiring soon alert
+          // 1. Expiring soon alert (dispatched when remaining days <= 7)
+          if (diffDays <= 7 && diffDays > 0) {
             if (task.notifyChannelIds && task.notifyChannelIds.length > 0) {
               NotificationService.dispatch(task.notifyChannelIds, {
                 event: 'expiring_soon',
@@ -65,6 +128,12 @@ export class SchedulerService {
                 daysLeft: diffDays
               });
             }
+          }
+
+          // 2. Automatic renewal trigger check
+          if (diffDays <= renewDaysThreshold) {
+            needRenew = true;
+            reason = `证书剩余有效期为 ${diffDays} 天 (阈值: <= ${renewDaysThreshold} 天)`;
           }
         }
       }

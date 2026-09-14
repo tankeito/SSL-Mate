@@ -25,8 +25,20 @@ import {
 import { CertTask } from '../../types';
 import { api } from '../../api/client';
 import { useModal } from '../../contexts/ModalContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 type TaskStatusFilter = 'all' | 'running' | 'healthy' | 'warning' | 'expired_unissued';
+
+const getStageLabel = (stage?: string) => {
+  switch (stage) {
+    case 'CHALLENGE_SET': return '写入DNS';
+    case 'PREFLIGHT_WAITING': return 'DNS预检中';
+    case 'ISSUING': return 'CA签发中';
+    case 'DEPLOYING': return '部署中';
+    case 'INIT': return '初始化中';
+    default: return '执行中';
+  }
+};
 
 interface TasksViewProps {
   onOpenNewTask: () => void;
@@ -39,6 +51,8 @@ export const TasksView: React.FC<TasksViewProps> = ({
   onEditTask,
   onOpenLiveLogs
 }) => {
+  const { user } = useAuth();
+  const isAuditor = user?.role === 'auditor' || user?.role === 'viewer';
   const { confirm, toast } = useModal();
   const [tasks, setTasks] = useState<CertTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,13 +207,19 @@ export const TasksView: React.FC<TasksViewProps> = ({
               <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${refreshing ? 'animate-spin text-emerald-500' : ''}`} />
             </button>
 
-            <button
-              onClick={onOpenNewTask}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 whitespace-nowrap shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>新建 3 步任务</span>
-            </button>
+            {!isAuditor ? (
+              <button
+                onClick={onOpenNewTask}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 whitespace-nowrap shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>新建 3 步任务</span>
+              </button>
+            ) : (
+              <span className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium border border-slate-200 dark:border-slate-700">
+                👁️ 只读审计中
+              </span>
+            )}
           </div>
         </div>
 
@@ -380,7 +400,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                       {/* Status Pill Badge */}
                       {isRunning ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 animate-pulse shrink-0 border border-blue-200 dark:border-blue-800/50">
-                          <RefreshCw className="w-3 h-3 animate-spin" /> 执行中
+                          <RefreshCw className="w-3 h-3 animate-spin" /> {task.stage ? getStageLabel(task.stage) : '执行中'}
                         </span>
                       ) : hasDays ? (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
@@ -460,15 +480,19 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
                   {/* Footer Action Bar */}
                   <div className="flex items-center justify-between pt-2.5 mt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
-                    <button
-                      onClick={() => handleRunTask(task)}
-                      disabled={isRunning}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
-                      title="立即执行证书申请与部署流水线"
-                    >
-                      <Play className="w-3 h-3 fill-current" />
-                      <span>{isRunning ? '执行中...' : '立即运行'}</span>
-                    </button>
+                    {!isAuditor ? (
+                      <button
+                        onClick={() => handleRunTask(task)}
+                        disabled={isRunning}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                        title="立即执行证书申请与部署流水线"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>{isRunning ? '执行中...' : '立即运行'}</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">只读审计</span>
+                    )}
 
                     <div className="flex items-center gap-1">
                       <button
@@ -478,20 +502,24 @@ export const TasksView: React.FC<TasksViewProps> = ({
                       >
                         <FileText className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => onEditTask(task)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                        title="编辑任务"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTask(task.id, task.name)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                        title="删除任务"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isAuditor && (
+                        <>
+                          <button
+                            onClick={() => onEditTask(task)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            title="编辑任务"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(task.id, task.name)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                            title="删除任务"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -543,7 +571,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                         <td className="py-3 px-4">
                           {isRunning ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 animate-pulse">
-                              <RefreshCw className="w-3 h-3 animate-spin" /> 执行中
+                              <RefreshCw className="w-3 h-3 animate-spin" /> {task.stage ? getStageLabel(task.stage) : '执行中'}
                             </span>
                           ) : hasDays ? (
                             <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -588,14 +616,16 @@ export const TasksView: React.FC<TasksViewProps> = ({
 
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => handleRunTask(task)}
-                              disabled={isRunning}
-                              className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors disabled:opacity-50"
-                              title="立即执行流水线"
-                            >
-                              <Play className="w-3.5 h-3.5 fill-current" />
-                            </button>
+                            {!isAuditor && (
+                              <button
+                                onClick={() => handleRunTask(task)}
+                                disabled={isRunning}
+                                className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors disabled:opacity-50"
+                                title="立即执行流水线"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                              </button>
+                            )}
                             <button
                               onClick={() => onOpenLiveLogs(task.id, task.name)}
                               className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -603,20 +633,24 @@ export const TasksView: React.FC<TasksViewProps> = ({
                             >
                               <FileText className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => onEditTask(task)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                              title="编辑任务"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTask(task.id, task.name)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                              title="删除任务"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {!isAuditor && (
+                              <>
+                                <button
+                                  onClick={() => onEditTask(task)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                  title="编辑任务"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTask(task.id, task.name)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                                  title="删除任务"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

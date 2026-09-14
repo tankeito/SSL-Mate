@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'operator' | 'viewer';
+export type Role = 'admin' | 'operator' | 'viewer' | 'auditor';
 export type AuthSource = 'local' | 'authmate';
 
 export interface User {
@@ -94,6 +94,7 @@ export interface DeployTarget {
 
 export type TaskStatus = 'active' | 'pending' | 'error' | 'expired' | 'renewing';
 export type TaskRunStatus = 'idle' | 'running' | 'success' | 'failed';
+export type TaskStage = 'INIT' | 'CHALLENGE_SET' | 'PREFLIGHT_WAITING' | 'ISSUING' | 'DEPLOYING' | 'COMPLETED' | 'FAILED';
 
 export interface CertTask {
   id: string;
@@ -110,6 +111,7 @@ export interface CertTask {
   notifyChannelIds: string[];
   status: TaskStatus;
   lastRunStatus: TaskRunStatus;
+  stage?: TaskStage;
   lastRunAt?: string;
   lastRunMessage?: string;
   nextRenewAt?: string;

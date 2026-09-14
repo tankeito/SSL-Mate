@@ -2,8 +2,22 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database.js';
 import { DomainMonitor } from '../db/schema.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { DomainMonitorService } from '../services/monitor.js';
+
+// Concurrency-limited worker pool helper
+async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<any>): Promise<void> {
+  let index = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (index < items.length) {
+      const current = items[index++];
+      try {
+        await fn(current);
+      } catch {}
+    }
+  });
+  await Promise.all(workers);
+}
 
 const router = Router();
 
@@ -20,7 +34,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Add Single Domain Monitor
  */
-router.post('/', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const { domain, port = 443, remark } = req.body;
 
   if (!domain) {
@@ -69,7 +83,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
 /**
  * Batch Add Domain Monitors (Supports TXT, CSV, Multi-line Text parsing)
  */
-router.post('/batch', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/batch', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const { items } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -118,7 +132,7 @@ router.post('/batch', async (req: AuthenticatedRequest, res: Response) => {
     });
   }
 
-  // Create monitors and probe in parallel (concurrency capped at 10)
+  // Create monitors and probe with worker concurrency limit of 6
   const createdMonitors: DomainMonitor[] = [];
 
   for (const item of validItems) {
@@ -134,8 +148,8 @@ router.post('/batch', async (req: AuthenticatedRequest, res: Response) => {
     createdMonitors.push(newMon);
   }
 
-  // Probe in background / parallel batch
-  await Promise.allSettled(createdMonitors.map(async (mon) => {
+  // Probe with concurrency limit of 6 workers
+  await runWithConcurrency(createdMonitors, 6, async (mon) => {
     try {
       const probe = await DomainMonitorService.inspectDomain(mon.domain, mon.port);
       mon.status = probe.status;
@@ -150,7 +164,7 @@ router.post('/batch', async (req: AuthenticatedRequest, res: Response) => {
       mon.lastCheckAt = new Date().toISOString();
     }
     db.upsertDomainMonitor(mon);
-  }));
+  });
 
   return res.status(201).json({
     totalAdded: createdMonitors.length,
@@ -162,7 +176,7 @@ router.post('/batch', async (req: AuthenticatedRequest, res: Response) => {
 /**
  * Update Domain Monitor (Remark / Port)
  */
-router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const monitor = db.findDomainMonitorById(String(req.params.id));
   if (!monitor) {
     return res.status(404).json({ error: '探针不存在' });
@@ -180,7 +194,7 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
 /**
  * Trigger immediate health check for a domain monitor
  */
-router.post('/:id/check', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/check', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const monitor = db.findDomainMonitorById(String(req.params.id));
   if (!monitor) {
     return res.status(404).json({ error: '探针不存在' });
@@ -210,7 +224,7 @@ router.post('/:id/check', async (req: AuthenticatedRequest, res: Response) => {
 /**
  * Delete Domain Monitor
  */
-router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const success = db.deleteDomainMonitor(String(req.params.id));
   if (!success) {
     return res.status(404).json({ error: '探针不存在' });

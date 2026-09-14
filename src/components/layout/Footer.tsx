@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
             SSL-Mate (证书伴侣)
           </span>
           <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold border border-emerald-200/80 dark:border-emerald-800/60">
-            v1.0.0 Enterprise
+            v1.1.0 Enterprise
           </span>
           <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">

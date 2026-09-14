@@ -22,8 +22,12 @@ export function hashPassword(password: string): string {
 export function verifyPassword(password: string, storedHash: string): boolean {
   if (!storedHash || !storedHash.includes(':')) return false;
   const [salt, originalHash] = storedHash.split(':');
+  if (!salt || !originalHash) return false;
   const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-  return hash === originalHash;
+  const hashBuf = Buffer.from(hash, 'hex');
+  const origBuf = Buffer.from(originalHash, 'hex');
+  if (hashBuf.length !== origBuf.length) return false;
+  return crypto.timingSafeEqual(hashBuf, origBuf);
 }
 
 export function generateToken(user: User): string {

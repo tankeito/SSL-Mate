@@ -7,6 +7,25 @@ import { TaskLogger } from '../logger.js';
 
 const execAsync = util.promisify(exec);
 
+// Standard safe web-server reload commands whitelist
+export const SAFE_RELOAD_COMMANDS = [
+  'nginx -s reload',
+  'systemctl reload nginx',
+  'systemctl restart nginx',
+  'systemctl reload openresty',
+  'systemctl reload caddy',
+  'caddy reload',
+  'apachectl graceful',
+  'systemctl reload apache2',
+  'systemctl reload httpd',
+  'docker exec nginx nginx -s reload'
+];
+
+export function isSafeReloadCommand(cmd: string): boolean {
+  const normalized = cmd.trim().toLowerCase();
+  return SAFE_RELOAD_COMMANDS.some(safeCmd => safeCmd.toLowerCase() === normalized);
+}
+
 export class LocalFileDeployer {
   public static async deploy(
     target: DeployTarget,
@@ -36,9 +55,17 @@ export class LocalFileDeployer {
     logger.success(`[本地部署] 证书文件已写入: ${fullchainFileName}, ${keyFileName}, ${certFileName}`, 'DEPLOY_LOCAL');
 
     if (reloadCommand && reloadCommand.trim()) {
-      logger.info(`[本地部署] 执行服务重载命令: ${reloadCommand}`, 'DEPLOY_LOCAL');
+      const trimmedCmd = reloadCommand.trim();
+      const isWhitelisted = isSafeReloadCommand(trimmedCmd);
+
+      if (isWhitelisted) {
+        logger.info(`[本地部署] 执行安全白名单重载命令: ${trimmedCmd}`, 'DEPLOY_LOCAL');
+      } else {
+        logger.warn(`[安全审计] 执行自定义宿主机系统命令: "${trimmedCmd}" (已通过系统管理员身份授权)`, 'AUDIT_CMD');
+      }
+
       try {
-        const { stdout, stderr } = await execAsync(reloadCommand);
+        const { stdout, stderr } = await execAsync(trimmedCmd, { timeout: 15000 });
         if (stdout) logger.info(`[重载输出] ${stdout.trim()}`, 'DEPLOY_LOCAL');
         if (stderr) logger.warn(`[重载提示] ${stderr.trim()}`, 'DEPLOY_LOCAL');
         logger.success(`[本地部署] 服务重载成功`, 'DEPLOY_LOCAL');

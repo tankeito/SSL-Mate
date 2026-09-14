@@ -126,8 +126,28 @@ class Database {
 
   private saveFileSync(data: DatabaseSchema): void {
     const tempPath = `${this.filePath}.tmp.${Date.now()}`;
+    const bakPath = `${this.filePath}.bak`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
-    fs.renameSync(tempPath, this.filePath);
+
+    let attempts = 0;
+    while (attempts < 5) {
+      try {
+        if (fs.existsSync(this.filePath)) {
+          try { fs.copyFileSync(this.filePath, bakPath); } catch {}
+        }
+        fs.renameSync(tempPath, this.filePath);
+        return;
+      } catch (err: any) {
+        attempts++;
+        if (attempts >= 5) {
+          try { fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), 'utf8'); } catch {}
+          try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch {}
+          return;
+        }
+        const start = Date.now();
+        while (Date.now() - start < attempts * 30) {}
+      }
+    }
   }
 
   public save(): void {
@@ -138,17 +158,34 @@ class Database {
 
     this.isSaving = true;
     const tempPath = `${this.filePath}.tmp.${Date.now()}`;
+    const bakPath = `${this.filePath}.bak`;
     const payload = JSON.stringify(this.data, null, 2);
+
+    const tryRename = (retriesLeft: number) => {
+      if (fs.existsSync(this.filePath)) {
+        try { fs.copyFileSync(this.filePath, bakPath); } catch {}
+      }
+      fs.rename(tempPath, this.filePath, (renameErr) => {
+        if (renameErr) {
+          if (retriesLeft > 0 && (renameErr.code === 'EPERM' || renameErr.code === 'EBUSY')) {
+            setTimeout(() => tryRename(retriesLeft - 1), 50);
+            return;
+          }
+          console.error('Failed to rename database file, falling back to direct write:', renameErr);
+          try { fs.writeFileSync(this.filePath, payload, 'utf8'); } catch (e) { console.error('Direct write failed:', e); }
+          try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch {}
+        }
+        this.isSaving = false;
+        if (this.saveQueued) {
+          this.saveQueued = false;
+          this.save();
+        }
+      });
+    };
 
     fs.writeFile(tempPath, payload, 'utf8', (err) => {
       if (!err) {
-        fs.rename(tempPath, this.filePath, (renameErr) => {
-          this.isSaving = false;
-          if (this.saveQueued) {
-            this.saveQueued = false;
-            this.save();
-          }
-        });
+        tryRename(5);
       } else {
         this.isSaving = false;
         console.error('Failed to write database temp file:', err);
@@ -244,7 +281,11 @@ class Database {
   public upsertAcmeAccount(account: AcmeAccount): AcmeAccount {
     account.updatedAt = new Date().toISOString();
     if (account.isDefault) {
-      this.data.acmeAccounts.forEach(a => { a.isDefault = false; });
+      this.data.acmeAccounts.forEach(a => {
+        if (a.id !== account.id) {
+          a.isDefault = false;
+        }
+      });
     }
     const idx = this.data.acmeAccounts.findIndex(a => a.id === account.id);
     if (idx >= 0) {
@@ -398,13 +439,15 @@ class Database {
 
   // Settings
   public updateSettings(settings: Partial<SystemSettings>): SystemSettings {
+    const current = this.data.settings;
     this.data.settings = {
-      ...this.data.settings,
-      ...settings,
-      authmate: {
-        ...this.data.settings.authmate,
-        ...(settings.authmate || {})
-      }
+      ...current,
+      globalRenewCheckCron: settings.globalRenewCheckCron !== undefined ? settings.globalRenewCheckCron : current.globalRenewCheckCron,
+      defaultRenewDaysBefore: settings.defaultRenewDaysBefore !== undefined ? settings.defaultRenewDaysBefore : current.defaultRenewDaysBefore,
+      authmate: settings.authmate ? {
+        ...current.authmate,
+        ...settings.authmate
+      } : current.authmate
     };
     this.save();
     return this.data.settings;

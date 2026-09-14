@@ -1,6 +1,6 @@
 import acme from 'acme-client';
 import crypto from 'crypto';
-import { AcmeAccount, Credential, KeyType } from '../../db/schema.js';
+import { AcmeAccount, Credential, KeyType, TaskStage } from '../../db/schema.js';
 import { decryptObject } from '../crypto.js';
 import { CloudflareDnsSolver } from './dns-providers/cloudflare.js';
 import { AliyunDnsSolver } from './dns-providers/aliyun.js';
@@ -14,6 +14,7 @@ export interface IssueCertOptions {
   dnsCredential?: Credential;
   keyType: KeyType;
   logger: TaskLogger;
+  onStageChange?: (stage: TaskStage) => void;
 }
 
 export interface IssuedCertificateResult {
@@ -162,16 +163,18 @@ export class AcmeService {
       challengePriority: ['dns-01'],
       challengeCreateFn: async (authz, challenge, keyAuthorization) => {
         if (challenge.type === 'dns-01') {
+          options.onStageChange?.('CHALLENGE_SET');
           const domain = authz.identifier.value;
           const recordName = `_acme-challenge.${domain.replace(/^\*\./, '')}`;
-          logger.info(`[DNS-01] 正在向 DNS 提供商添加 TXT 记录: ${recordName} -> ${keyAuthorization}`, 'DNS');
+          logger.info(`[DNS-01] 正在向 DNS 提供商添加 TXT 记录: ${recordName} -> ${keyAuthorization}`, 'CHALLENGE_SET');
           await dnsSolver.setRecord(domain, challenge.token, keyAuthorization);
-          logger.success(`[DNS-01] TXT 记录写入成功，开始执行全球权威 DNS 广播预检...`, 'DNS');
+          logger.success(`[DNS-01] TXT 记录写入成功，开始执行全球权威 DNS 广播预检...`, 'CHALLENGE_SET');
 
           // Active Pre-flight poll via Cloudflare DoH (up to 60s)
+          options.onStageChange?.('PREFLIGHT_WAITING');
           let preflightOk = false;
           for (let attempt = 1; attempt <= 12; attempt++) {
-            logger.info(`[DNS-01] 正在轮询全球 DNS 节点 (第 ${attempt}/12 次检测，每次间隔 5s)...`, 'DNS');
+            logger.info(`[DNS-01] 正在轮询全球 DNS 节点 (第 ${attempt}/12 次检测，每次间隔 5s)...`, 'PREFLIGHT_WAITING');
             try {
               const dohRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(recordName)}&type=TXT`, {
                 headers: { 'Accept': 'application/dns-json' }
@@ -181,7 +184,7 @@ export class AcmeService {
                 const answers = dohData.Answer || [];
                 const found = answers.some((a: any) => a.data && a.data.includes(keyAuthorization));
                 if (found) {
-                  logger.success(`[DNS-01] ✅ 全球权威 DNS 预检通过！已成功探测到 TXT 挑战记录`, 'DNS');
+                  logger.success(`[DNS-01] ✅ 全球权威 DNS 预检通过！已成功探测到 TXT 挑战记录`, 'PREFLIGHT_WAITING');
                   preflightOk = true;
                   break;
                 }
@@ -191,12 +194,14 @@ export class AcmeService {
           }
 
           if (!preflightOk) {
-            logger.warn(`[DNS-01] 全球 DNS 节点同步较慢，追加 10 秒安全缓冲后提交 ACME CA 校验...`, 'DNS');
+            logger.warn(`[DNS-01] 全球 DNS 节点同步较慢，追加 10 秒安全缓冲后提交 ACME CA 校验...`, 'PREFLIGHT_WAITING');
             await new Promise(r => setTimeout(r, 10000));
           } else {
             // Buffer for Let's Encrypt multi-perspective validation
             await new Promise(r => setTimeout(r, 5000));
           }
+
+          options.onStageChange?.('ISSUING');
         }
       },
       challengeRemoveFn: async (authz, challenge, keyAuthorization) => {
@@ -208,7 +213,8 @@ export class AcmeService {
       }
     });
 
-    logger.success('🎉 CA 机构校验成功，SSL 证书已成功签发！', 'ISSUED');
+    options.onStageChange?.('ISSUING');
+    logger.success('🎉 CA 机构校验成功，SSL 证书已成功签发！', 'ISSUING');
 
     // 3. Extract Certificate Details
     const certString = Array.isArray(pems) ? pems.join('\n') : pems.toString();

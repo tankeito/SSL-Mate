@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database.js';
 import { AcmeAccount } from '../db/schema.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { encrypt, maskSecret } from '../services/crypto.js';
 
 const router = Router();
@@ -39,7 +39,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Create ACME Account
  */
-router.post('/', (req: AuthenticatedRequest, res: Response) => {
+router.post('/', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const { name, caProvider, email, directoryUrl, eabKid, eabHmacKey, isDefault } = req.body;
 
   if (!name || !caProvider || !email) {
@@ -69,7 +69,7 @@ router.post('/', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Update ACME Account
  */
-router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const account = db.findAcmeAccountById(String(req.params.id));
   if (!account) {
     return res.status(404).json({ error: 'ACME 账户不存在' });
@@ -93,7 +93,7 @@ router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Delete ACME Account
  */
-router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const success = db.deleteAcmeAccount(String(req.params.id));
   if (!success) {
     return res.status(404).json({ error: 'ACME 账户不存在' });

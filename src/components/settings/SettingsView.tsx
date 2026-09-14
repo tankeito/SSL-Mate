@@ -18,6 +18,7 @@ import { useModal } from '../../contexts/ModalContext';
 
 export const SettingsView: React.FC = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { toast } = useModal();
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +94,15 @@ export const SettingsView: React.FC = () => {
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">系统设置与 AuthMate SSO</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">配置全局自动化续期守护进程参数及 AuthMate OIDC 单点登录</p>
       </div>
+
+      {!isAdmin && (
+        <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-200 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            只读提示：当前登录角色为【{user?.role === 'operator' ? '运维操作员' : '只读审计员'}】，全局核心运维规则与 SSO 鉴权信息仅供查阅。配置变更仅限系统管理员 (Admin) 授权操作。
+          </span>
+        </div>
+      )}
 
       {/* AuthMate OIDC SSO Integration Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm space-y-5">
@@ -245,11 +255,16 @@ export const SettingsView: React.FC = () => {
 
         <button
           onClick={handleSaveSettings}
-          disabled={saving}
-          className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
+          disabled={saving || !isAdmin}
+          className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            isAdmin
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-50'
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+          }`}
+          title={!isAdmin ? '仅系统管理员允许保存设置' : undefined}
         >
           <Save className="w-4 h-4" />
-          <span>{saving ? '保存中...' : '保存全局设置'}</span>
+          <span>{saving ? '保存中...' : !isAdmin ? '仅管理员允许修改全局设置' : '保存全局设置'}</span>
         </button>
       </div>
 

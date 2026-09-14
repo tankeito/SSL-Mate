@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2">
             <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">SSL-Mate</h1>
             <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
-              证书伴侣 v1.0
+              证书伴侣 v1.1.0
             </span>
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">极简自动化 SSL 证书生命周期管理平台</p>
@@ -75,13 +75,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="text-right">
               <div className="flex items-center justify-end gap-1.5">
                 <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">{user.username}</span>
+                {user.role === 'admin' && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                    👑 管理员
+                  </span>
+                )}
+                {user.role === 'operator' && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
+                    🛠️ 操作员
+                  </span>
+                )}
+                {(user.role === 'auditor' || user.role === 'viewer') && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    👁️ 审计员
+                  </span>
+                )}
                 {user.authSource === 'authmate' ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40">
                     <Key className="w-2.5 h-2.5" /> AuthMate SSO
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                    <Lock className="w-2.5 h-2.5" /> 本地灾备
+                    <Lock className="w-2.5 h-2.5" /> 本地
                   </span>
                 )}
               </div>

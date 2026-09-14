@@ -7,7 +7,7 @@
   <p>告别繁琐易错的流程图连线，声明式 3 步向导配置全自动域名证书申请、全球 DNS 预检、多端部署与临期自动续期。</p>
 
   <p>
-    <a href="https://github.com/tankeito/SSL-Mate/releases"><img src="https://img.shields.io/badge/Release-v1.0.0-10b981?style=flat-square&logo=github" alt="Release" /></a>
+    <a href="https://github.com/tankeito/SSL-Mate/releases"><img src="https://img.shields.io/badge/Release-v1.1.0-10b981?style=flat-square&logo=github" alt="Release" /></a>
     <a href="https://hub.docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=flat-square&logo=docker" alt="Docker Ready" /></a>
     <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-Strict%20Mode-3178c6?style=flat-square&logo=typescript" alt="TypeScript Strict" /></a>
     <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.x-61dafb?style=flat-square&logo=react" alt="React 19" /></a>
@@ -356,6 +356,34 @@ SSL-Mate 原生内置对 **AuthMate** (及兼容 OIDC/OAuth2 标准的 IdP 提�
 
 > **解答**：在登录界面点击 **【使用本地灾备管理员登录 (Break-Glass)】**，输入本地管理员账号和密码即可正常登录运维，确保极端情况下业务连续性不受影响。
 </details>
+
+---
+
+## 🌟 版本更新说明 (Release Notes)
+
+### 🚀 v1.1.0 (Enterprise Quality & Hardening Milestone)
+
+- 🛡️ **生产级 RBAC 鉴权与宿主机命令执行防御 (BUG-01, BUG-02, OPT-02)**：
+  - 全面落地超级管理员 (`admin`)、运维操作员 (`operator`) 与新增只读审计员 (`auditor`) 三级权限矩阵；
+  - 核心高危接口全面接入权限门禁，限制本地部署命令与系统设置仅超级管理员可操作；
+  - 引入常用重载命令安全白名单（`nginx -s reload`, `systemctl reload ...`）与 15 秒超时，自定义命令自动触发 `[AUDIT_CMD]` 安全审计日志；
+  - 密码校验重构为 `crypto.timingSafeEqual` 恒定时序，杜绝微秒级侧信道探测风险 (OPT-05)。
+- ⚡ **自研纯 ASN.1 DER PKCS#12 组装器 (BUG-03, OPT-03)**：
+  - 彻底攻克历史遗留 `node-forge` 不支持 ECC 导致导出 PFX/PKCS#12 崩溃 500 的难题；
+  - 原生全面支持 `ECC P-256` / `ECC P-384` / `RSA` 双算法导出，并递归打包完整叶子与中间 CA 证书链。
+- 🔄 **ACME 异步任务队列与断点续签自愈容灾 (OPT-04)**：
+  - 引入细粒度 Stage 状态机（`INIT` $\rightarrow$ `CHALLENGE_SET` $\rightarrow$ `PREFLIGHT_WAITING` $\rightarrow$ `ISSUING` $\rightarrow$ `DEPLOYING` $\rightarrow$ `COMPLETED`）实时持久化落盘；
+  - 引入并发限流队列池（最大并发数 2），彻底消除凌晨批量定时续期对云厂商 DNS API 频控与网络套接字的冲击；
+  - 调度器启动时自动排查中断的 `renewing` 状态任务，优雅清理悬挂日志并自动排队重试，杜绝服务重启导致任务死锁在 409。
+- 💾 **Windows 存储并发写入指数退避与双快照 (OPT-01)**：
+  - 在底层数据库持久化中引入 5 次指数退避重试循环，根除 Windows 杀软与系统索引带来的 `EPERM`/`EBUSY` 文件锁竞争；
+  - 自动维护 `.bak` 镜像快照容灾。
+- 🚀 **TLS 批量探针 6-Worker 并发池与去重 (BUG-04)**：
+  - 批量导入域名探针接入 6-Worker 并发调度池与双层严格去重，消除网络探测超时与资源耗尽。
+- 🎨 **UI/UX 细节体验升级**：
+  - 顶栏导航实时展示用户角色身份勋章徽标 (`👑 管理员` / `🛠️ 操作员` / `👁️ 审计员`)；
+  - 任务列表动态呈现细粒度执行阶段胶囊（`写入DNS`、`DNS预检中`、`CA签发中`、`部署中`）；
+  - 非管理员访问敏感设置时展示醒目只读警告横幅，操作项针对审计员自适应安全隐藏。
 
 ---
 

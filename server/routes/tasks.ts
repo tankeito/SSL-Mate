@@ -2,8 +2,13 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database.js';
 import { CertTask } from '../db/schema.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { TaskOrchestrator } from '../services/orchestrator.js';
+
+function hasLocalReloadCommand(deployTargets: any[]): boolean {
+  if (!Array.isArray(deployTargets)) return false;
+  return deployTargets.some(t => t?.type === 'local' && t?.config?.reloadCommand && String(t.config.reloadCommand).trim().length > 0);
+}
 
 const router = Router();
 
@@ -57,7 +62,7 @@ router.get('/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Create Task (3-Step Wizard payload)
  */
-router.post('/', (req: AuthenticatedRequest, res: Response) => {
+router.post('/', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const {
     name,
     domains,
@@ -78,6 +83,11 @@ router.post('/', (req: AuthenticatedRequest, res: Response) => {
 
   if (!acmeAccountId) {
     return res.status(400).json({ error: '请选择关联的 ACME CA 账户' });
+  }
+
+  // ReloadCommand host execution requires admin role
+  if (hasLocalReloadCommand(deployTargets) && req.user?.role !== 'admin') {
+    return res.status(403).json({ error: '权限不足：配置本地服务重载命令 (reloadCommand) 涉及宿主机系统执行权限，仅系统管理员 (admin) 允许配置' });
   }
 
   const cleanDomains = domains.map((d: string) => d.trim().toLowerCase()).filter(Boolean);
@@ -109,7 +119,7 @@ router.post('/', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Update Task
  */
-router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const task = db.findTaskById(String(req.params.id));
   if (!task) {
     return res.status(404).json({ error: '任务不存在' });
@@ -128,6 +138,11 @@ router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
     cronExpr,
     notifyChannelIds
   } = req.body;
+
+  // ReloadCommand host execution requires admin role
+  if (deployTargets !== undefined && hasLocalReloadCommand(deployTargets) && req.user?.role !== 'admin') {
+    return res.status(403).json({ error: '权限不足：修改本地服务重载命令 (reloadCommand) 涉及宿主机系统执行权限，仅系统管理员 (admin) 允许配置' });
+  }
 
   if (name) task.name = name;
   if (domains && Array.isArray(domains)) {
@@ -151,7 +166,7 @@ router.put('/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Delete Task
  */
-router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const success = db.deleteTask(String(req.params.id));
   if (!success) {
     return res.status(404).json({ error: '任务不存在' });
@@ -162,7 +177,7 @@ router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Trigger Immediate Manual Execution of Task
  */
-router.post('/:id/run', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/run', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const task = db.findTaskById(String(req.params.id));
   if (!task) {
     return res.status(404).json({ error: '任务不存在' });

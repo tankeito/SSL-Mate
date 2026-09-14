@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { db } from '../db/database.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { decrypt } from '../services/crypto.js';
 import { CertParserService } from '../services/cert-parser.js';
 
@@ -60,9 +60,9 @@ router.get('/:id', (req: AuthenticatedRequest, res: Response) => {
  * Download Certificate in specified format
  * Formats: nginx, apache, pfx, pem, key, fullchain, json
  */
-router.get('/:id/download/:format', (req: AuthenticatedRequest, res: Response) => {
+const handleCertDownload = (req: AuthenticatedRequest, res: Response) => {
   const id = String(req.params.id);
-  const format = String(req.params.format);
+  const format = String(req.params.format || req.query.format || 'pem').toLowerCase();
   const cert = db.findCertificateById(id);
   if (!cert) {
     return res.status(404).json({ error: '证书不存在' });
@@ -91,7 +91,7 @@ router.get('/:id/download/:format', (req: AuthenticatedRequest, res: Response) =
 
     case 'pfx':
     case 'p12': {
-      const password = (req.query.password as string) || '';
+      const password = String(req.query.password || req.query.pfxPassword || '');
       try {
         const pfxBuffer = CertParserService.exportPfx(cert.fullchainPem, privkey, password);
         res.setHeader('Content-Type', 'application/x-pkcs12');
@@ -120,7 +120,10 @@ router.get('/:id/download/:format', (req: AuthenticatedRequest, res: Response) =
     default:
       return res.status(400).json({ error: `不支持的导出格式: ${format}` });
   }
-});
+};
+
+router.get('/:id/download', handleCertDownload);
+router.get('/:id/download/:format', handleCertDownload);
 
 /**
  * Online X.509 Certificate Inspector
@@ -142,7 +145,7 @@ router.post('/inspect', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Delete Certificate
  */
-router.delete('/:id', (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const success = db.deleteCertificate(String(req.params.id));
   if (!success) {
     return res.status(404).json({ error: '证书不存在' });

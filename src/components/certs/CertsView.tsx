@@ -28,10 +28,13 @@ import {
 import { Certificate } from '../../types';
 import { api } from '../../api/client';
 import { useModal } from '../../contexts/ModalContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 type CertStatusFilter = 'all' | 'healthy' | 'warning' | 'expired';
 
 export const CertsView: React.FC = () => {
+  const { user } = useAuth();
+  const isAuditor = user?.role === 'auditor' || user?.role === 'viewer';
   const { confirm, toast } = useModal();
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -491,13 +494,15 @@ export const CertsView: React.FC = () => {
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteCert(cert.id, cert.primaryDomain)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                        title="删除证书归档"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isAuditor && (
+                        <button
+                          onClick={() => handleDeleteCert(cert.id, cert.primaryDomain)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                          title="删除证书归档"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -588,13 +593,15 @@ export const CertsView: React.FC = () => {
                               <Eye className="w-3.5 h-3.5" />
                             </button>
 
-                            <button
-                              onClick={() => handleDeleteCert(cert.id, cert.primaryDomain)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                              title="删除证书"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {!isAuditor && (
+                              <button
+                                onClick={() => handleDeleteCert(cert.id, cert.primaryDomain)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                                title="删除证书"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -711,10 +718,14 @@ export const CertsView: React.FC = () => {
               {/* PFX format */}
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span>IIS / Tomcat 格式 (.pfx / .p12)</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>IIS / Tomcat 格式 (.pfx / .p12)</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-normal">支持 ECC/RSA + 全链</span>
+                  </div>
                   <button
                     onClick={() => handleDownloadFormat(downloadModalCert.id, 'pfx')}
-                    className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                    title="导出 PFX"
                   >
                     <Download className="w-3.5 h-3.5" />
                   </button>
@@ -726,6 +737,9 @@ export const CertsView: React.FC = () => {
                   placeholder="PFX 导出密码 (默认留空)"
                   className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono"
                 />
+                <p className="text-[11px] text-slate-400">
+                  包含完整中间 CA 链，兼容 Windows IIS、Tomcat、K8s Secret 及各大负载均衡器
+                </p>
               </div>
             </div>
           </div>

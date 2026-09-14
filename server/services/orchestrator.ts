@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { db } from '../db/database.js';
-import { CertTask, Certificate, TaskExecutionLog } from '../db/schema.js';
+import { CertTask, Certificate, TaskExecutionLog, TaskStage } from '../db/schema.js';
 import { AcmeService } from './acme/client.js';
 import { DeployOrchestrator } from './deployers/index.js';
 import { TaskLogger } from './logger.js';
@@ -8,7 +8,46 @@ import { NotificationService } from './notify.js';
 import { encrypt } from './crypto.js';
 
 export class TaskOrchestrator {
+  private static runningCount = 0;
+  private static queue: Array<() => Promise<void>> = [];
+
   public static async executeTask(
+    taskId: string,
+    triggerType: 'auto_cron' | 'manual' | 'webhook' = 'manual'
+  ): Promise<{ success: boolean; error?: string }> {
+    const task = db.findTaskById(taskId);
+    if (!task) {
+      throw new Error(`任务不存在: ${taskId}`);
+    }
+
+    return new Promise((resolve) => {
+      const runTask = async () => {
+        this.runningCount++;
+        try {
+          const result = await this.doExecuteTask(taskId, triggerType);
+          resolve(result);
+        } catch (err: any) {
+          resolve({ success: false, error: err.message });
+        } finally {
+          this.runningCount--;
+          const next = this.queue.shift();
+          if (next) {
+            next();
+          }
+        }
+      };
+
+      // Throttle concurrent ACME operations (max 2 concurrent)
+      if (this.runningCount < 2) {
+        runTask();
+      } else {
+        console.log(`[TaskQueue] 任务 [${task.name}] 加入异步执行队列 (并发数: ${this.runningCount}, 排队数: ${this.queue.length + 1})`);
+        this.queue.push(runTask);
+      }
+    });
+  }
+
+  private static async doExecuteTask(
     taskId: string,
     triggerType: 'auto_cron' | 'manual' | 'webhook' = 'manual'
   ): Promise<{ success: boolean; error?: string }> {
@@ -36,8 +75,17 @@ export class TaskOrchestrator {
 
     task.status = 'renewing';
     task.lastRunStatus = 'running';
+    task.stage = 'INIT';
     task.lastRunAt = new Date().toISOString();
     db.upsertTask(task);
+
+    const updateStage = (stage: TaskStage) => {
+      task.stage = stage;
+      executionLog.stage = stage;
+      executionLog.logs = logger.entries;
+      db.upsertTask(task);
+      db.updateExecutionLog(executionLog);
+    };
 
     logger.info(`=======================================================`);
     logger.info(`🚀 启动证书自动化任务 [${task.name}] (触发方式: ${triggerType})`, 'INIT');
@@ -54,14 +102,15 @@ export class TaskOrchestrator {
       // 2. Fetch DNS Credential
       let dnsCredential = task.dnsCredentialId ? db.findCredentialById(task.dnsCredentialId) : undefined;
 
-      // 3. Issue Certificate via ACME
-      executionLog.stage = 'ACME_ISSUE';
+      // 3. Issue Certificate via ACME with fine-grained stage tracking
+      updateStage('INIT');
       const certResult = await AcmeService.issueCertificate({
         domains: task.domains,
         acmeAccount,
         dnsCredential,
         keyType: task.keyType || 'ec256',
-        logger
+        logger,
+        onStageChange: (st) => updateStage(st)
       });
 
       // 4. Save Certificate Asset to Repository
@@ -89,7 +138,7 @@ export class TaskOrchestrator {
       logger.success(`证书资产已归档入库 (ID: ${certId})，有效期至: ${new Date(certResult.expiresAt).toLocaleDateString()}`, 'STORAGE');
 
       // 5. Multi-Target Deployment
-      executionLog.stage = 'DEPLOY';
+      updateStage('DEPLOYING');
       if (task.deployTargets && task.deployTargets.length > 0) {
         await DeployOrchestrator.executeAll(
           task.deployTargets,
@@ -108,6 +157,7 @@ export class TaskOrchestrator {
       const durationMs = Date.now() - startTime;
       task.status = 'active';
       task.lastRunStatus = 'success';
+      task.stage = 'COMPLETED';
       task.lastRunMessage = '证书签发与全量部署成功';
       db.upsertTask(task);
 
@@ -137,6 +187,7 @@ export class TaskOrchestrator {
 
       task.status = 'error';
       task.lastRunStatus = 'failed';
+      task.stage = 'FAILED';
       task.lastRunMessage = err.message;
       db.upsertTask(task);
 
@@ -162,3 +213,4 @@ export class TaskOrchestrator {
     }
   }
 }
+

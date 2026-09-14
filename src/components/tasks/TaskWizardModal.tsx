@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { CertTask, AcmeAccount, Credential, DeployTarget, DeployTargetType, NotifyChannel } from '../../types';
 import { api } from '../../api/client';
+import { useAuth } from '../../contexts/AuthContext';
 import { BaotaLogo, OnePanelLogo } from '../common/BrandIcons';
 
 interface TaskWizardModalProps {
@@ -39,6 +40,8 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
   onSuccess,
   initialTask
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -555,13 +558,19 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-slate-500 mb-1">重载命令 (可选)</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-slate-500">重载命令 (可选)</label>
+                            {!isAdmin && (
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">仅限管理员配置</span>
+                            )}
+                          </div>
                           <input
                             type="text"
                             value={target.config.reloadCommand || ''}
+                            disabled={!isAdmin}
                             onChange={e => updateDeployTargetConfig(target.id, { reloadCommand: e.target.value })}
-                            placeholder="systemctl reload nginx"
-                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                            placeholder={isAdmin ? "systemctl reload nginx" : "宿主机系统命令仅系统管理员可配置"}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-850 disabled:cursor-not-allowed"
                           />
                         </div>
                       </div>

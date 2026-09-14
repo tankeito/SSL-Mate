@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { db } from '../db/database.js';
 import { NotifyChannel } from '../db/schema.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { encryptObject, decryptObject, maskSecret } from '../services/crypto.js';
 import { NotificationService } from '../services/notify.js';
 
@@ -40,7 +40,7 @@ router.get('/channels', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Create notification channel
  */
-router.post('/channels', (req: AuthenticatedRequest, res: Response) => {
+router.post('/channels', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const { name, type, isEnabled = true, events = ['renew_success', 'renew_failed', 'expiring_soon'], config } = req.body;
 
   if (!name || !type || !config) {
@@ -69,7 +69,7 @@ router.post('/channels', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Update notification channel
  */
-router.put('/channels/:id', (req: AuthenticatedRequest, res: Response) => {
+router.put('/channels/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const channel = db.findNotifyChannelById(String(req.params.id));
   if (!channel) {
     return res.status(404).json({ error: '通知通道不存在' });
@@ -106,7 +106,7 @@ router.put('/channels/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Delete notification channel
  */
-router.delete('/channels/:id', (req: AuthenticatedRequest, res: Response) => {
+router.delete('/channels/:id', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
   const success = db.deleteNotifyChannel(String(req.params.id));
   if (!success) {
     return res.status(404).json({ error: '通知通道不存在' });
@@ -117,7 +117,7 @@ router.delete('/channels/:id', (req: AuthenticatedRequest, res: Response) => {
 /**
  * Test send notification
  */
-router.post('/test', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/test', requireRole(['admin', 'operator']), async (req: AuthenticatedRequest, res: Response) => {
   const { type, config } = req.body;
 
   const mockChannel: NotifyChannel = {

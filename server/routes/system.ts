@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { db } from '../db/database.js';
-import { requireAuth, AuthenticatedRequest } from '../services/auth.js';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 
 const router = Router();
 
@@ -11,7 +11,7 @@ router.get('/info', (req, res) => {
   const settings = db.getSettings();
   return res.json({
     name: 'SSL-Mate (证书伴侣)',
-    version: '1.0.0',
+    version: '1.1.0',
     ssoEnabled: settings.authmate.enabled,
     issuerUrl: settings.authmate.issuerUrl
   });
@@ -83,14 +83,15 @@ import { clearOIDCDiscoveryCache } from '../services/sso.js';
 /**
  * Update System Settings (including AuthMate OIDC SSO configuration)
  */
-router.put('/settings', (req: AuthenticatedRequest, res: Response) => {
+router.put('/settings', requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
   const { authmate, globalRenewCheckCron, defaultRenewDaysBefore } = req.body;
 
-  const updated = db.updateSettings({
-    authmate,
-    globalRenewCheckCron,
-    defaultRenewDaysBefore: Number(defaultRenewDaysBefore) || 30
-  });
+  const patch: any = {};
+  if (authmate !== undefined) patch.authmate = authmate;
+  if (globalRenewCheckCron !== undefined) patch.globalRenewCheckCron = globalRenewCheckCron;
+  if (defaultRenewDaysBefore !== undefined) patch.defaultRenewDaysBefore = Number(defaultRenewDaysBefore);
+
+  const updated = db.updateSettings(patch);
 
   clearOIDCDiscoveryCache();
 
