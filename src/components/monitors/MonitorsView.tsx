@@ -302,8 +302,7 @@ export const MonitorsView: React.FC = () => {
     if (statusFilter === 'all') return true;
     if (statusFilter === 'healthy') return m.status === 'healthy';
     if (statusFilter === 'warning') return m.status === 'warning';
-    if (statusFilter === 'expired') return m.status === 'expired';
-    if (statusFilter === 'unreachable') return m.status === 'unreachable';
+    if (statusFilter === 'expired') return m.status === 'expired' || m.status === 'unreachable';
     return true;
   });
 
