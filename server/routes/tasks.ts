@@ -73,6 +73,7 @@ router.post('/', requireRole(['admin', 'operator']), (req: AuthenticatedRequest,
     deployTargets = [],
     autoRenew = true,
     renewDaysBefore = 30,
+    alertDaysBefore,
     cronExpr = '0 2 * * *',
     notifyChannelIds = []
   } = req.body;
@@ -103,6 +104,7 @@ router.post('/', requireRole(['admin', 'operator']), (req: AuthenticatedRequest,
     deployTargets,
     autoRenew,
     renewDaysBefore: Number(renewDaysBefore) || 30,
+    alertDaysBefore: alertDaysBefore !== undefined ? Number(alertDaysBefore) : undefined,
     cronExpr,
     notifyChannelIds,
     status: 'pending',
@@ -135,6 +137,7 @@ router.put('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedReques
     deployTargets,
     autoRenew,
     renewDaysBefore,
+    alertDaysBefore,
     cronExpr,
     notifyChannelIds
   } = req.body;
@@ -155,6 +158,7 @@ router.put('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedReques
   if (deployTargets !== undefined) task.deployTargets = deployTargets;
   if (autoRenew !== undefined) task.autoRenew = autoRenew;
   if (renewDaysBefore !== undefined) task.renewDaysBefore = Number(renewDaysBefore);
+  if (alertDaysBefore !== undefined) task.alertDaysBefore = Number(alertDaysBefore);
   if (cronExpr) task.cronExpr = cronExpr;
   if (notifyChannelIds !== undefined) task.notifyChannelIds = notifyChannelIds;
 

@@ -13,6 +13,11 @@ export interface NotificationPayload {
 }
 
 export class NotificationService {
+  public static async dispatchAll(payload: NotificationPayload) {
+    const allChannels = db.getNotifyChannels().filter(c => c.isEnabled).map(c => c.id);
+    await this.dispatch(allChannels, payload);
+  }
+
   public static async dispatch(channelIds: string[], payload: NotificationPayload) {
     if (!channelIds || channelIds.length === 0) return;
 

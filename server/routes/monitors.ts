@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import crypto from 'crypto';
+import { config } from '../config.js';
 import { db } from '../db/database.js';
 import { DomainMonitor } from '../db/schema.js';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
@@ -148,8 +149,10 @@ router.post('/batch', requireRole(['admin', 'operator']), async (req: Authentica
     createdMonitors.push(newMon);
   }
 
-  // Probe with concurrency limit of 6 workers
-  await runWithConcurrency(createdMonitors, 6, async (mon) => {
+  // Probe with dynamically sized worker pool (adaptive based on batch size and settings)
+  const maxPoolSize = db.getSettings()?.monitorConcurrency || config.monitorConcurrency || 6;
+  const poolSize = Math.min(maxPoolSize, Math.max(2, Math.ceil(createdMonitors.length / 4)));
+  await runWithConcurrency(createdMonitors, poolSize, async (mon) => {
     try {
       const probe = await DomainMonitorService.inspectDomain(mon.domain, mon.port);
       mon.status = probe.status;

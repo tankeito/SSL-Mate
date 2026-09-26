@@ -6,12 +6,70 @@ import { CloudflareDnsSolver } from './dns-providers/cloudflare.js';
 import { AliyunDnsSolver } from './dns-providers/aliyun.js';
 import { TencentDnsSolver } from './dns-providers/tencent.js';
 import { HuaweiDnsSolver } from './dns-providers/huawei.js';
+import dns from 'dns';
+import { db } from '../../db/database.js';
 import { TaskLogger } from '../logger.js';
+import { HttpChallengeStore } from './http-challenge.js';
+
+function resolveAcmeEmail(providedEmail?: string, domainFallback?: string): string {
+  if (providedEmail && providedEmail.includes('@') && providedEmail.includes('.') && !providedEmail.endsWith('.local')) {
+    return providedEmail.trim();
+  }
+  try {
+    const admin = db.getUsers().find(u => u.role === 'admin' && u.email && u.email.includes('@') && !u.email.endsWith('.local'));
+    if (admin?.email) return admin.email.trim();
+  } catch {}
+  if (process.env.DEFAULT_ACME_EMAIL && process.env.DEFAULT_ACME_EMAIL.includes('@')) {
+    return process.env.DEFAULT_ACME_EMAIL.trim();
+  }
+  const cleanDomain = domainFallback ? domainFallback.replace(/^\*\./, '') : 'sslmate.local';
+  return `admin@${cleanDomain}`;
+}
+
+async function checkTxtRecord(recordName: string, expectedVal: string, customResolver?: string): Promise<boolean> {
+  // 1. First probe local DNS (fastest, 0-10ms)
+  try {
+    const records = await dns.promises.resolveTxt(recordName);
+    const combined = records.flat().join(' ');
+    if (combined.includes(expectedVal)) {
+      return true;
+    }
+  } catch {}
+
+  // 2. Multi-channel DoH provider pool (AliDNS, DNSPod, Cloudflare, Google)
+  const endpoints: string[] = [];
+  if (customResolver) {
+    endpoints.push(customResolver.includes('?') ? `${customResolver}&name=${encodeURIComponent(recordName)}&type=TXT` : `${customResolver}?name=${encodeURIComponent(recordName)}&type=TXT`);
+  }
+  endpoints.push(
+    `https://dns.alidns.com/resolve?name=${encodeURIComponent(recordName)}&type=TXT`,
+    `https://doh.pub/dns-query?name=${encodeURIComponent(recordName)}&type=TXT`,
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(recordName)}&type=TXT`,
+    `https://dns.google/resolve?name=${encodeURIComponent(recordName)}&type=TXT`
+  );
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/dns-json' },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        const data = await res.json() as any;
+        const answers = data.Answer || [];
+        const found = answers.some((a: any) => a.data && a.data.includes(expectedVal));
+        if (found) return true;
+      }
+    } catch {}
+  }
+  return false;
+}
 
 export interface IssueCertOptions {
   domains: string[];
   acmeAccount: AcmeAccount;
   dnsCredential?: Credential;
+  validationType?: 'dns-01' | 'http-01';
   keyType: KeyType;
   logger: TaskLogger;
   onStageChange?: (stage: TaskStage) => void;
@@ -89,10 +147,7 @@ export class AcmeService {
 
     const client = new acme.Client(clientOptions);
 
-    let safeEmail = account.email ? account.email.trim() : '';
-    if (!safeEmail || safeEmail.endsWith('.local') || !safeEmail.includes('@') || !safeEmail.includes('.')) {
-      safeEmail = 'tqd354@gmail.com';
-    }
+    let safeEmail = resolveAcmeEmail(account.email);
 
     try {
       // Register or fetch existing account
@@ -121,15 +176,13 @@ export class AcmeService {
       throw new Error('未指定任何域名');
     }
 
-    logger.info(`开始自动化申请 SSL 证书，目标域名: [${domains.join(', ')}]，密钥算法: ${keyType}`, 'INIT');
+    const validationType = options.validationType || 'dns-01';
+    logger.info(`开始自动化申请 SSL 证书，目标域名: [${domains.join(', ')}]，密钥算法: ${keyType}，验证协议: ${validationType.toUpperCase()}`, 'INIT');
 
     const client = await this.getOrCreateClient(acmeAccount, logger);
-    const dnsSolver = this.getDnsSolver(dnsCredential);
+    const dnsSolver = validationType === 'dns-01' ? this.getDnsSolver(dnsCredential) : null;
 
-    let safeEmail = acmeAccount.email ? acmeAccount.email.trim() : '';
-    if (!safeEmail || safeEmail.endsWith('.local') || !safeEmail.includes('@') || !safeEmail.includes('.')) {
-      safeEmail = 'tqd354@gmail.com';
-    }
+    let safeEmail = resolveAcmeEmail(acmeAccount.email, domains[0]);
 
     // 1. Generate Domain Private Key & CSR
     logger.info('生成域名专属私钥与证书签名请求 (CSR)...', 'CSR');
@@ -152,60 +205,83 @@ export class AcmeService {
 
     logger.success('私钥与 CSR 创建成功', 'CSR');
 
-    // 2. Issue Certificate via DNS-01 Challenge
-    logger.info('向 ACME CA 创建证书申请订单并处理 DNS-01 验证...', 'CHALLENGE');
+    // 2. Issue Certificate via Challenge
+    const challengePriority = validationType === 'http-01' ? ['http-01', 'dns-01'] : ['dns-01', 'http-01'];
+    logger.info(`向 ACME CA 创建证书申请订单并处理 ${validationType.toUpperCase()} 验证...`, 'CHALLENGE');
 
     const pems = await client.auto({
       csr: certificateCsr,
       email: safeEmail,
       termsOfServiceAgreed: true,
       skipChallengeVerification: true,
-      challengePriority: ['dns-01'],
+      challengePriority,
       challengeCreateFn: async (authz, challenge, keyAuthorization) => {
-        if (challenge.type === 'dns-01') {
+        if (challenge.type === 'http-01') {
+          options.onStageChange?.('CHALLENGE_SET');
+          const domain = authz.identifier.value;
+          logger.info(`[HTTP-01] 注册 HTTP-01 验证端点: /.well-known/acme-challenge/${challenge.token} (域名: ${domain})`, 'CHALLENGE_SET');
+          HttpChallengeStore.registerChallenge(challenge.token, keyAuthorization);
+
+          // Active Preflight test
+          options.onStageChange?.('PREFLIGHT_WAITING');
+          logger.info(`[HTTP-01] 执行本地与公网 HTTP-01 预检 (http://${domain}/.well-known/acme-challenge/${challenge.token})...`, 'PREFLIGHT_WAITING');
+          try {
+            const resp = await fetch(`http://${domain}/.well-known/acme-challenge/${challenge.token}`, { signal: AbortSignal.timeout(3000) });
+            if (resp.ok) {
+              const text = (await resp.text()).trim();
+              if (text === keyAuthorization.trim()) {
+                logger.success(`[HTTP-01] ✅ 公网 HTTP-01 预检通过！目标服务器正确响应挑战令牌`, 'PREFLIGHT_WAITING');
+              }
+            }
+          } catch {
+            const stored = HttpChallengeStore.getChallenge(challenge.token);
+            if (stored === keyAuthorization.trim()) {
+              logger.info(`[HTTP-01] 内部挑战存储就绪，已注册令牌等待 ACME CA 请求...`, 'PREFLIGHT_WAITING');
+            }
+          }
+          await new Promise(r => setTimeout(r, 2000));
+          options.onStageChange?.('ISSUING');
+        } else if (challenge.type === 'dns-01' && dnsSolver) {
           options.onStageChange?.('CHALLENGE_SET');
           const domain = authz.identifier.value;
           const recordName = `_acme-challenge.${domain.replace(/^\*\./, '')}`;
           logger.info(`[DNS-01] 正在向 DNS 提供商添加 TXT 记录: ${recordName} -> ${keyAuthorization}`, 'CHALLENGE_SET');
           await dnsSolver.setRecord(domain, challenge.token, keyAuthorization);
-          logger.success(`[DNS-01] TXT 记录写入成功，开始执行全球权威 DNS 广播预检...`, 'CHALLENGE_SET');
+          logger.success(`[DNS-01] TXT 记录写入成功，开始执行权威 DNS 广播预检...`, 'CHALLENGE_SET');
 
-          // Active Pre-flight poll via Cloudflare DoH (up to 60s)
+          // Active Pre-flight poll via multi-channel DNS resolver (Local + AliDNS + DNSPod + Cloudflare)
           options.onStageChange?.('PREFLIGHT_WAITING');
           let preflightOk = false;
+          const customResolver = db.getSettings()?.dnsResolverUrl;
           for (let attempt = 1; attempt <= 12; attempt++) {
-            logger.info(`[DNS-01] 正在轮询全球 DNS 节点 (第 ${attempt}/12 次检测，每次间隔 5s)...`, 'PREFLIGHT_WAITING');
+            logger.info(`[DNS-01] 正在轮询全球权威 DNS 节点 (第 ${attempt}/12 次多源探测)...`, 'PREFLIGHT_WAITING');
             try {
-              const dohRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(recordName)}&type=TXT`, {
-                headers: { 'Accept': 'application/dns-json' }
-              });
-              if (dohRes.ok) {
-                const dohData = await dohRes.json() as any;
-                const answers = dohData.Answer || [];
-                const found = answers.some((a: any) => a.data && a.data.includes(keyAuthorization));
-                if (found) {
-                  logger.success(`[DNS-01] ✅ 全球权威 DNS 预检通过！已成功探测到 TXT 挑战记录`, 'PREFLIGHT_WAITING');
-                  preflightOk = true;
-                  break;
-                }
+              const found = await checkTxtRecord(recordName, keyAuthorization, customResolver);
+              if (found) {
+                logger.success(`[DNS-01] ✅ 权威 DNS 预检通过！已成功探测到 TXT 挑战记录`, 'PREFLIGHT_WAITING');
+                preflightOk = true;
+                break;
               }
             } catch (_) {}
-            await new Promise(r => setTimeout(r, 5000));
+            await new Promise(r => setTimeout(r, 4000));
           }
 
           if (!preflightOk) {
-            logger.warn(`[DNS-01] 全球 DNS 节点同步较慢，追加 10 秒安全缓冲后提交 ACME CA 校验...`, 'PREFLIGHT_WAITING');
-            await new Promise(r => setTimeout(r, 10000));
+            logger.warn(`[DNS-01] 权威 DNS 节点同步较慢，追加 8 秒安全缓冲后提交 ACME CA 校验...`, 'PREFLIGHT_WAITING');
+            await new Promise(r => setTimeout(r, 8000));
           } else {
-            // Buffer for Let's Encrypt multi-perspective validation
-            await new Promise(r => setTimeout(r, 5000));
+            // Buffer for CA multi-perspective validation
+            await new Promise(r => setTimeout(r, 4000));
           }
 
           options.onStageChange?.('ISSUING');
         }
       },
       challengeRemoveFn: async (authz, challenge, keyAuthorization) => {
-        if (challenge.type === 'dns-01') {
+        if (challenge.type === 'http-01') {
+          logger.info(`[HTTP-01] 释放 HTTP-01 验证端点令牌: ${challenge.token}`, 'HTTP');
+          HttpChallengeStore.removeChallenge(challenge.token);
+        } else if (challenge.type === 'dns-01' && dnsSolver) {
           const domain = authz.identifier.value;
           logger.info(`[DNS-01] 正在清理临时 TXT 记录: _acme-challenge.${domain}`, 'DNS');
           await dnsSolver.removeRecord(domain, challenge.token, keyAuthorization);

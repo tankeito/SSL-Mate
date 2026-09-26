@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { config } from '../config.js';
 import { db } from '../db/database.js';
 import { CertTask, Certificate, TaskExecutionLog, TaskStage } from '../db/schema.js';
 import { AcmeService } from './acme/client.js';
@@ -37,11 +38,12 @@ export class TaskOrchestrator {
         }
       };
 
-      // Throttle concurrent ACME operations (max 2 concurrent)
-      if (this.runningCount < 2) {
+      // Throttle concurrent ACME operations dynamically based on settings or env
+      const maxConcurrent = db.getSettings()?.acmeConcurrency || config.acmeConcurrency || 3;
+      if (this.runningCount < maxConcurrent) {
         runTask();
       } else {
-        console.log(`[TaskQueue] 任务 [${task.name}] 加入异步执行队列 (并发数: ${this.runningCount}, 排队数: ${this.queue.length + 1})`);
+        console.log(`[TaskQueue] 任务 [${task.name}] 加入异步执行队列 (并发数: ${this.runningCount}/${maxConcurrent}, 排队数: ${this.queue.length + 1})`);
         this.queue.push(runTask);
       }
     });
@@ -108,6 +110,7 @@ export class TaskOrchestrator {
         domains: task.domains,
         acmeAccount,
         dnsCredential,
+        validationType: task.validationType || 'dns-01',
         keyType: task.keyType || 'ec256',
         logger,
         onStageChange: (st) => updateStage(st)

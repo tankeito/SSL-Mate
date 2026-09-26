@@ -137,7 +137,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
             type === 'webhook' ? '通用 Webhook' : '自定义目标',
       enabled: true,
       config: {
-        targetPath: type === 'ssh' ? '/etc/nginx/ssl' : '/etc/ssl/certs',
+        targetPath: type === 'ssh' ? '/etc/nginx/ssl' : (typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent || '') ? 'C:\\nginx\\ssl' : '/etc/nginx/ssl'),
         certFileName: 'cert.pem',
         keyFileName: 'privkey.pem',
         fullchainFileName: 'fullchain.pem',
@@ -332,23 +332,64 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    DNS 云厂商 API 凭据 <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={dnsCredentialId}
-                    onChange={e => setDnsCredentialId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  ACME 验证协议 (Challenge Protocol)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setValidationType('dns-01')}
+                    className={`p-2.5 rounded-xl text-left border transition-all ${
+                      validationType === 'dns-01'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                    }`}
                   >
-                    <option value="">-- 请选择已保存的 DNS API 凭据 --</option>
-                    {dnsCredentials.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.type.replace('dns_', '').toUpperCase()})
-                      </option>
-                    ))}
-                  </select>
+                    <div className="font-bold text-xs">DNS-01 验证 (推荐)</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">支持通配符泛域名，全自动化静默验证</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setValidationType('http-01')}
+                    className={`p-2.5 rounded-xl text-left border transition-all ${
+                      validationType === 'http-01'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="font-bold text-xs">HTTP-01 验证 (REC-02)</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">免 DNS API，需公网 80 端口可达单域名</div>
+                  </button>
                 </div>
+
+                {validationType === 'dns-01' ? (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      DNS 云厂商 API 凭据 <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={dnsCredentialId}
+                      onChange={e => setDnsCredentialId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                    >
+                      <option value="">-- 请选择已保存的 DNS API 凭据 --</option>
+                      {dnsCredentials.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.type.replace('dns_', '').toUpperCase()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs text-blue-800 dark:text-blue-300">
+                    <p className="font-bold">✨ HTTP-01 免 API 极速验证模式就绪：</p>
+                    <p className="text-[11px] mt-0.5 text-blue-700/80 dark:text-blue-300/80">
+                      系统内置独立 HTTP-01 响应引擎，签发时将自动响应 <code>/.well-known/acme-challenge/</code> 令牌，无需配置任何云厂商 AK/SK！
+                    </p>
+                  </div>
+                )}
+              </div>
               </div>
 
               <div>
@@ -432,6 +473,14 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   >
                     <Cloud className="w-3.5 h-3.5 text-amber-600" />
                     <span>+ CDN</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addDeployTarget('k8s_secret')}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-xs font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 transition-all active:scale-95 shadow-sm"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-blue-600" />
+                    <span>+ K8s Secret</span>
                   </button>
                   <button
                     type="button"
@@ -553,7 +602,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                             type="text"
                             value={target.config.targetPath || ''}
                             onChange={e => updateDeployTargetConfig(target.id, { targetPath: e.target.value })}
-                            placeholder="/etc/nginx/ssl"
+                            placeholder={typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent || '') ? "C:\\nginx\\ssl 或 D:\\certs" : "/etc/nginx/ssl"}
                             className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
                           />
                         </div>
@@ -649,6 +698,54 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                             value={target.config.webhookUrl || ''}
                             onChange={e => updateDeployTargetConfig(target.id, { webhookUrl: e.target.value })}
                             placeholder="https://api.example.com/webhooks/ssl"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {target.type === 'k8s_secret' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">K8s 集群凭据 (可选)</label>
+                          <select
+                            value={target.credentialId || ''}
+                            onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="">-- 默认 In-Cluster ServiceAccount 或主机凭据 --</option>
+                            {credentials.filter(c => c.type === 'kubernetes').map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">命名空间 (Namespace)</label>
+                          <input
+                            type="text"
+                            value={target.config.namespace || 'default'}
+                            onChange={e => updateDeployTargetConfig(target.id, { namespace: e.target.value })}
+                            placeholder="default 或 prod"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">TLS Secret 名称</label>
+                          <input
+                            type="text"
+                            value={target.config.secretName || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { secretName: e.target.value })}
+                            placeholder="如: myapp-tls (留空按域名自动生成)"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">关联 Ingress 名称 (可选)</label>
+                          <input
+                            type="text"
+                            value={target.config.ingressName || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { ingressName: e.target.value })}
+                            placeholder="如: main-ingress"
                             className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
                           />
                         </div>

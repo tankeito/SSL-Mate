@@ -112,7 +112,7 @@ export const CredentialsView: React.FC = () => {
     setCredType('dns_cloudflare');
     setCredRemark('');
     setCfApiToken('');
-    setCfAuthEmail('tqd354@gmail.com');
+    setCfAuthEmail('');
     setCfAuthKey('');
     setAliAccessKeyId('');
     setAliAccessKeySecret('');
@@ -123,10 +123,10 @@ export const CredentialsView: React.FC = () => {
     setSshUsername('root');
     setSshPassword('');
     setSshPrivateKey('');
-    setBtApiUrl('http://192.168.1.100:8888');
+    setBtApiUrl('');
     setBtApiKey('');
     setBtIgnoreSsl(false);
-    setOnePanelUrl('http://192.168.1.100:10000');
+    setOnePanelUrl('');
     setOnePanelApiKey('');
     setTestResult(null);
     setModalOpen(true);
@@ -780,7 +780,7 @@ export const CredentialsView: React.FC = () => {
                       type="url"
                       value={btApiUrl}
                       onChange={e => setBtApiUrl(e.target.value)}
-                      placeholder="http://192.168.1.100:8888"
+                      placeholder="例如: http://192.168.1.100:8888 或 https://bt.yourdomain.com:8888"
                       required
                       className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
                     />
@@ -830,7 +830,7 @@ export const CredentialsView: React.FC = () => {
                       type="url"
                       value={onePanelUrl}
                       onChange={e => setOnePanelUrl(e.target.value)}
-                      placeholder="http://192.168.1.100:10000"
+                      placeholder="例如: http://192.168.1.100:10000 或 https://panel.yourdomain.com:10000"
                       required
                       className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
                     />

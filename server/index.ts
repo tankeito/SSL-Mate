@@ -15,6 +15,10 @@ import monitorsRouter from './routes/monitors.js';
 import notifyRouter from './routes/notify.js';
 import systemRouter from './routes/system.js';
 import usersRouter from './routes/users.js';
+import backupRouter from './routes/backup.js';
+import ctMonitorRouter from './routes/ct-monitor.js';
+import probesRouter from './routes/probes.js';
+import { HttpChallengeStore } from './services/acme/http-challenge.js';
 
 const app = express();
 
@@ -23,8 +27,19 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ACME RFC 8555 HTTP-01 Challenge Endpoint (REC-02)
+app.get('/.well-known/acme-challenge/:token', (req: Request, res: Response) => {
+  const token = String(req.params.token || '').trim();
+  const keyAuth = HttpChallengeStore.getChallenge(token);
+  if (keyAuth) {
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send(keyAuth);
+  }
+  return res.status(404).send('ACME challenge token not found or expired');
+});
 
 // API Routes
 app.use('/api/auth', authRouter);
@@ -36,6 +51,9 @@ app.use('/api/certs', certsRouter);
 app.use('/api/monitors', monitorsRouter);
 app.use('/api/notify', notifyRouter);
 app.use('/api/system', systemRouter);
+app.use('/api/backup', backupRouter);
+app.use('/api/ct-monitor', ctMonitorRouter);
+app.use('/api/probes', probesRouter);
 
 // SSE Live Log Streaming Endpoint
 app.get('/events/tasks/:taskId', (req: Request, res: Response) => {

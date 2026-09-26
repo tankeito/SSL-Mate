@@ -5,7 +5,7 @@ import { verifyPassword, hashPassword, generateToken, requireAuth, Authenticated
 import { buildSSOAuthorizationUrl, exchangeCodeForTokens, fetchUserInfo, provisionSSOUser, generatePKCE } from '../services/sso.js';
 
 import { verifyTotpToken } from '../services/totp.js';
-import { decrypt } from '../services/crypto.js';
+import { encrypt, decrypt } from '../services/crypto.js';
 
 const router = Router();
 
@@ -88,7 +88,7 @@ router.post('/login', (req: Request, res: Response) => {
 });
 
 /**
- * Get AuthMate SSO Authorization URL
+ * Get AuthMate SSO Authorization URL (Generates stateless encrypted PKCE state)
  */
 router.get('/sso/url', async (req: Request, res: Response) => {
   try {
@@ -98,15 +98,22 @@ router.get('/sso/url', async (req: Request, res: Response) => {
     }
 
     const { verifier, challenge } = generatePKCE();
-    const state = crypto.randomBytes(16).toString('hex');
+    // Stateless encrypted PKCE state token: supports distributed multi-instance clusters & Docker replicas
+    const statePayload = {
+      nonce: crypto.randomBytes(12).toString('hex'),
+      verifier,
+      exp: Date.now() + 600000 // 10 minutes TTL
+    };
+    const stateToken = Buffer.from(encrypt(JSON.stringify(statePayload))).toString('base64url');
+    
+    // In-memory fallback for local backward-compatibility
+    pkceStore.set(stateToken, { verifier, timestamp: Date.now() });
 
-    pkceStore.set(state, { verifier, timestamp: Date.now() });
-
-    const authUrl = await buildSSOAuthorizationUrl(state, challenge);
+    const authUrl = await buildSSOAuthorizationUrl(stateToken, challenge);
 
     return res.json({
       authUrl,
-      state
+      state: stateToken
     });
   } catch (err: any) {
     return res.status(500).json({ error: `生成 SSO 登录链接失败: ${err.message}` });
@@ -123,9 +130,30 @@ router.post('/sso/callback', async (req: Request, res: Response) => {
     return res.status(400).json({ error: '缺少 Authorization Code 或 State 参数' });
   }
 
-  const pkceData = pkceStore.get(state);
-  const codeVerifier = pkceData?.verifier;
+  let codeVerifier: string | undefined;
+
+  // 1. Decrypt stateless PKCE state token
+  try {
+    const rawState = Buffer.from(state, 'base64url').toString('utf8');
+    const decryptedJson = decrypt(rawState);
+    if (decryptedJson) {
+      const parsed = JSON.parse(decryptedJson);
+      if (parsed.exp && parsed.exp > Date.now()) {
+        codeVerifier = parsed.verifier;
+      }
+    }
+  } catch {}
+
+  // 2. Memory store fallback
+  if (!codeVerifier && pkceStore.has(state)) {
+    const pkceData = pkceStore.get(state);
+    codeVerifier = pkceData?.verifier;
+  }
   pkceStore.delete(state);
+
+  if (!codeVerifier) {
+    return res.status(400).json({ error: 'SSO 认证状态 (State) 无效或已过期，请重新发起登录' });
+  }
 
   try {
     const tokens = await exchangeCodeForTokens(code, codeVerifier);

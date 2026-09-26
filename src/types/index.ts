@@ -29,6 +29,7 @@ export type CredentialType =
   | 'bt_panel'
   | 'one_panel'
   | 'safeline'
+  | 'kubernetes'
   | 'generic_webhook';
 
 export interface Credential {
@@ -66,6 +67,7 @@ export type DeployTargetType =
   | 'bt_panel'
   | 'one_panel'
   | 'safeline'
+  | 'k8s_secret'
   | 'webhook';
 
 export interface DeployTarget {
@@ -86,6 +88,10 @@ export interface DeployTarget {
     region?: string;
     siteName?: string;
     websiteId?: string;
+    namespace?: string;
+    secretName?: string;
+    ingressName?: string;
+    restartDeployment?: string;
     webhookUrl?: string;
     authHeader?: string;
     customPayload?: string;
@@ -107,6 +113,7 @@ export interface CertTask {
   deployTargets: DeployTarget[];
   autoRenew: boolean;
   renewDaysBefore: number;
+  alertDaysBefore?: number;
   cronExpr: string;
   notifyChannelIds: string[];
   status: TaskStatus;
@@ -140,6 +147,8 @@ export interface Certificate {
   daysLeft?: number;
   isExpired?: boolean;
   isRevoked: boolean;
+  ctStatus?: 'clean' | 'suspected_hijack' | 'pending';
+  lastCtCheckAt?: string;
   createdAt: string;
 }
 
@@ -167,8 +176,23 @@ export interface DomainMonitor {
   daysLeft?: number;
   lastCheckAt?: string;
   lastCheckError?: string;
+  ocspStapling?: boolean;
+  ocspStatus?: 'good' | 'revoked' | 'unknown' | 'no_stapling';
+  ocspCheckedAt?: string;
+  ocspResponseSize?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProbeNode {
+  id: string;
+  name: string;
+  region: 'cn-north' | 'cn-east' | 'cn-south' | 'hk' | 'overseas' | 'custom';
+  endpoint?: string;
+  status: 'online' | 'offline';
+  isBuiltin: boolean;
+  lastSeenAt?: string;
+  latencyMs?: number;
 }
 
 export interface TaskExecutionLog {
@@ -211,4 +235,8 @@ export interface SystemSettings {
   };
   globalRenewCheckCron: string;
   defaultRenewDaysBefore: number;
+  defaultAlertDaysBefore?: number;
+  acmeConcurrency?: number;
+  monitorConcurrency?: number;
+  dnsResolverUrl?: string;
 }

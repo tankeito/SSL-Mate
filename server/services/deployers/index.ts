@@ -6,6 +6,7 @@ import { SshDeployer } from './ssh.js';
 import { AliyunCdnDeployer } from './aliyun-cdn.js';
 import { PanelDeployer, CloudflareDeployer } from './panel.js';
 import { WebhookDeployer } from './webhook.js';
+import { K8sDeployer } from './k8s.js';
 
 export interface DeployCertificatePayload {
   domains: string[];
@@ -63,6 +64,10 @@ export class DeployOrchestrator {
 
           case 'safeline':
             await PanelDeployer.deploySafeLine(target, credential, certData, logger);
+            break;
+
+          case 'k8s_secret':
+            await K8sDeployer.deploy(target, credential, certData, logger);
             break;
 
           case 'webhook':

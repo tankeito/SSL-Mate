@@ -20,7 +20,9 @@ import {
   LayoutGrid,
   List,
   Clock,
-  Filter
+  Filter,
+  CheckCircle2,
+  ShieldAlert
 } from 'lucide-react';
 import { DomainMonitor } from '../../types';
 import { api } from '../../api/client';
@@ -65,6 +67,50 @@ export const MonitorsView: React.FC = () => {
   // Edit Remark Modal
   const [editRemarkMonitor, setEditRemarkMonitor] = useState<DomainMonitor | null>(null);
   const [editRemarkValue, setEditRemarkValue] = useState('');
+
+  // Probe Matrix Modal (REC-04)
+  const [probeMatrixModalOpen, setProbeMatrixModalOpen] = useState(false);
+  const [probeDomainInput, setProbeDomainInput] = useState('');
+  const [probePortInput, setProbePortInput] = useState(443);
+  const [probeLoading, setProbeLoading] = useState(false);
+  const [probeReport, setProbeReport] = useState<any | null>(null);
+
+  // CT Monitor Modal (REC-03)
+  const [ctModalOpen, setCtModalOpen] = useState(false);
+  const [ctDomainInput, setCtDomainInput] = useState('');
+  const [ctLoading, setCtLoading] = useState(false);
+  const [ctLogs, setCtLogs] = useState<any[]>([]);
+
+  const handleOpenProbeMatrix = async (domain: string, port = 443) => {
+    setProbeDomainInput(domain);
+    setProbePortInput(port);
+    setProbeMatrixModalOpen(true);
+    setProbeLoading(true);
+    setProbeReport(null);
+    try {
+      const rep = await api.probeMatrix(domain, port);
+      setProbeReport(rep);
+    } catch (err: any) {
+      toast.error(`探针矩阵探测失败: ${err.message}`);
+    } finally {
+      setProbeLoading(false);
+    }
+  };
+
+  const handleOpenCtLogs = async (domain: string) => {
+    setCtDomainInput(domain);
+    setCtModalOpen(true);
+    setCtLoading(true);
+    setCtLogs([]);
+    try {
+      const res = await api.getCtLogs(domain);
+      setCtLogs(res.logs || []);
+    } catch (err: any) {
+      toast.error(`CT 日志查询失败: ${err.message}`);
+    } finally {
+      setCtLoading(false);
+    }
+  };
 
   const fetchMonitors = async (showToast = false) => {
     if (showToast) setRefreshing(true);
@@ -320,6 +366,30 @@ export const MonitorsView: React.FC = () => {
           </button>
 
           <button
+            onClick={() => {
+              const defaultDomain = monitors[0]?.domain || 'example.com';
+              handleOpenProbeMatrix(defaultDomain, monitors[0]?.port || 443);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 text-xs font-bold transition-all active:scale-95 shrink-0"
+            title="多地域探针矩阵 (REC-04)"
+          >
+            <Globe className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">探针矩阵</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const defaultDomain = monitors[0]?.domain || 'example.com';
+              handleOpenCtLogs(defaultDomain);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/60 text-xs font-bold transition-all active:scale-95 shrink-0"
+            title="CT 证书透明度日志监控 (REC-03)"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+            <span className="hidden sm:inline">CT 日志</span>
+          </button>
+
+          <button
             onClick={openAddModal}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 whitespace-nowrap shrink-0"
           >
@@ -527,6 +597,28 @@ export const MonitorsView: React.FC = () => {
                     </div>
                   )}
 
+                  {/* OCSP Stapling Status (REC-05) */}
+                  <div className="text-[11px] text-slate-400 truncate flex items-center justify-between pt-0.5">
+                    <span>OCSP 装订:</span>
+                    {m.ocspStatus === 'good' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                        <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                        <span>正常装订</span>
+                      </span>
+                    ) : m.ocspStatus === 'revoked' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.5 rounded animate-pulse">
+                        <AlertTriangle className="w-3 h-3 text-rose-500" />
+                        <span>已吊销!</span>
+                      </span>
+                    ) : m.ocspStatus === 'no_stapling' ? (
+                      <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                        未装订
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">未知</span>
+                    )}
+                  </div>
+
                   {/* Error if any */}
                   {m.lastCheckError && (
                     <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-[10px] truncate" title={m.lastCheckError}>
@@ -539,6 +631,20 @@ export const MonitorsView: React.FC = () => {
                 <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400">
                   <span className="font-mono">{m.lastCheckAt ? new Date(m.lastCheckAt).toLocaleTimeString() : '等待初检'}</span>
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenProbeMatrix(m.domain, m.port)}
+                      className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                      title="多地域探针矩阵 (REC-04)"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenCtLogs(m.domain)}
+                      className="p-1.5 rounded-lg text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                      title="CT 日志与防劫持 (REC-03)"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={() => {
                         setEditRemarkMonitor(m);
@@ -581,6 +687,7 @@ export const MonitorsView: React.FC = () => {
                   <th className="py-3 px-4">端口</th>
                   <th className="py-3 px-4">业务备注</th>
                   <th className="py-3 px-4">健康状态</th>
+                  <th className="py-3 px-4">OCSP 装订</th>
                   <th className="py-3 px-4">剩余有效天数</th>
                   <th className="py-3 px-4">颁发 CA 机构</th>
                   <th className="py-3 px-4">上次巡检</th>
@@ -635,6 +742,24 @@ export const MonitorsView: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-4">
+                        {m.ocspStatus === 'good' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                            <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                            <span>已装订</span>
+                          </span>
+                        ) : m.ocspStatus === 'revoked' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.5 rounded animate-pulse">
+                            <AlertTriangle className="w-3 h-3 text-rose-500" />
+                            <span>已吊销!</span>
+                          </span>
+                        ) : m.ocspStatus === 'no_stapling' ? (
+                          <span className="text-[10px] text-slate-400">未装订</span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">-</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4">
                         {m.daysLeft !== undefined ? (
                           <span className={`font-bold font-mono ${
                             m.daysLeft <= 7 ? 'text-rose-500' : m.daysLeft <= 30 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
@@ -656,6 +781,20 @@ export const MonitorsView: React.FC = () => {
 
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenProbeMatrix(m.domain, m.port)}
+                            className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                            title="多地域探针矩阵 (REC-04)"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenCtLogs(m.domain)}
+                            className="p-1.5 rounded-lg text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                            title="CT 日志与防劫持 (REC-03)"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => {
                               setEditRemarkMonitor(m);
@@ -1001,6 +1140,344 @@ export const MonitorsView: React.FC = () => {
                   保存备注
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* REC-04: Probe Matrix Modal */}
+      {probeMatrixModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl p-6 space-y-5 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                    <span>多地域 TLS 探针矩阵巡检</span>
+                    <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                      REC-04
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    从华北、华东、华南、香港与欧美 5 大分布式边缘节点并发握手探测，校验指纹一致性与网络延迟
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setProbeMatrixModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target input row */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={probeDomainInput}
+                  onChange={e => setProbeDomainInput(e.target.value)}
+                  placeholder="请输入需要巡检的域名 (如 example.com)"
+                  className="w-full pl-3 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono"
+                />
+              </div>
+              <input
+                type="number"
+                value={probePortInput}
+                onChange={e => setProbePortInput(Number(e.target.value))}
+                className="w-20 px-2 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono text-center"
+                placeholder="443"
+              />
+              <button
+                type="button"
+                onClick={() => handleOpenProbeMatrix(probeDomainInput, probePortInput)}
+                disabled={probeLoading || !probeDomainInput.trim()}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${probeLoading ? 'animate-spin' : ''}`} />
+                <span>{probeLoading ? '矩阵探测中...' : '并发探测'}</span>
+              </button>
+            </div>
+
+            {/* Results Area */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {probeLoading ? (
+                <div className="py-16 text-center space-y-3">
+                  <div className="animate-spin rounded-full h-9 w-9 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="text-xs text-slate-400">正在并发调度 5 个边缘节点向目标发起真实 TLS 握手...</p>
+                </div>
+              ) : probeReport ? (
+                <div className="space-y-4">
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1">
+                      <div className="text-[11px] text-slate-400">综合网络健康度</div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-base font-bold font-mono ${
+                          probeReport.overallStatus === 'healthy' ? 'text-emerald-600 dark:text-emerald-400' :
+                          probeReport.overallStatus === 'warning' ? 'text-amber-500' : 'text-rose-500'
+                        }`}>
+                          {probeReport.overallStatus === 'healthy' ? '全节点正常' :
+                           probeReport.overallStatus === 'warning' ? '部分节点告警' : '节点不可达'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1">
+                      <div className="text-[11px] text-slate-400">全网平均 TLS 握手延迟</div>
+                      <div className="text-base font-bold font-mono text-blue-600 dark:text-blue-400">
+                        {probeReport.avgLatencyMs} <span className="text-xs font-normal text-slate-400">ms</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1">
+                      <div className="text-[11px] text-slate-400">证书指纹跨域一致性</div>
+                      <div className="flex items-center gap-1.5">
+                        {!probeReport.consistencyMismatch ? (
+                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>100% 一致 (无篡改)</span>
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>发现指纹差异 (警惕劫持)</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {probeReport.mismatchDetails && (
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-700 dark:text-amber-300">
+                      ⚠️ 提示: {probeReport.mismatchDetails}
+                    </div>
+                  )}
+
+                  {/* Regional Node Results Table */}
+                  <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs text-slate-600 dark:text-slate-400">
+                      <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-300 font-bold">
+                        <tr>
+                          <th className="py-2.5 px-3">探针节点</th>
+                          <th className="py-2.5 px-3">地域</th>
+                          <th className="py-2.5 px-3">状态</th>
+                          <th className="py-2.5 px-3">解析 IP</th>
+                          <th className="py-2.5 px-3">延迟</th>
+                          <th className="py-2.5 px-3">协议 & 套件</th>
+                          <th className="py-2.5 px-3 font-mono">证书 SHA-256 指纹</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {probeReport.regionalResults?.map((node: any) => (
+                          <tr key={node.nodeId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td className="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-200">
+                              {node.nodeName}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[10px]">
+                                {node.region}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                node.status === 'healthy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300' :
+                                node.status === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300' :
+                                'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300'
+                              }`}>
+                                {node.status === 'healthy' ? '正常' : node.status === 'warning' ? '告警' : '失败'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px]">
+                              {node.resolvedIp || '-'}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-slate-700 dark:text-slate-300">
+                              {node.latencyMs} ms
+                            </td>
+                            <td className="py-2.5 px-3 text-[11px]">
+                              <div>{node.tlsVersion || '-'}</div>
+                              <div className="text-[10px] text-slate-400 font-mono truncate max-w-[140px]" title={node.cipherSuite}>
+                                {node.cipherSuite || '-'}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[10px] text-slate-500" title={node.fingerprintSha256}>
+                              {node.fingerprintSha256 ? `${node.fingerprintSha256.substring(0, 16)}...` : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-xs text-slate-400">
+                  请输入域名并点击“并发探测”发起多节点测试
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setProbeMatrixModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REC-03: CT Logs & Anti-Hijack Modal */}
+      {ctModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl p-6 space-y-5 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                    <span>Certificate Transparency (CT) 证书透明度审计</span>
+                    <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                      REC-03
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    检索公开 crt.sh 归档记录并核验本地已知证书库，主动防范未授权颁发或伪造劫持
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setCtModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target input row */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={ctDomainInput}
+                  onChange={e => setCtDomainInput(e.target.value)}
+                  placeholder="请输入需要查询 CT 归档的域名 (如 example.com)"
+                  className="w-full pl-3 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenCtLogs(ctDomainInput)}
+                disabled={ctLoading || !ctDomainInput.trim()}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>{ctLoading ? '查询中...' : '检索 CT 日志'}</span>
+              </button>
+            </div>
+
+            {/* Results Area */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {ctLoading ? (
+                <div className="py-16 text-center space-y-3">
+                  <div className="animate-spin rounded-full h-9 w-9 border-b-2 border-purple-500 mx-auto"></div>
+                  <p className="text-xs text-slate-400">正在向全球 CT 归档节点检索该域名的公信证书记录...</p>
+                </div>
+              ) : ctLogs.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <div>
+                      检索到 <span className="font-bold text-slate-900 dark:text-white font-mono">{ctLogs.length}</span> 条公信 CT 归档记录
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        本地已知: {ctLogs.filter(e => e.isKnownBySslMate).length}
+                      </span>
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        外部签发: {ctLogs.filter(e => !e.isKnownBySslMate).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs text-slate-600 dark:text-slate-400">
+                      <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-300 font-bold">
+                        <tr>
+                          <th className="py-2.5 px-3">CT 记录 ID</th>
+                          <th className="py-2.5 px-3">证书域名 (CN / SANs)</th>
+                          <th className="py-2.5 px-3">签发 CA 机构</th>
+                          <th className="py-2.5 px-3">有效期区间</th>
+                          <th className="py-2.5 px-3">SSL-Mate 鉴别</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {ctLogs.slice(0, 50).map((entry: any) => (
+                          <tr key={entry.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td className="py-2.5 px-3 font-mono text-[11px]">
+                              <a
+                                href={`https://crt.sh/?id=${entry.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+                              >
+                                <span>{entry.id}</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                                {entry.common_name}
+                              </div>
+                              {entry.name_value && entry.name_value !== entry.common_name && (
+                                <div className="text-[10px] text-slate-400 truncate max-w-[200px]" title={entry.name_value}>
+                                  {entry.name_value}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-[11px] truncate max-w-[160px]" title={entry.issuer_name}>
+                              {entry.issuer_name || '-'}
+                            </td>
+                            <td className="py-2.5 px-3 text-[10px] font-mono text-slate-500 whitespace-nowrap">
+                              <div>{entry.not_before ? new Date(entry.not_before).toLocaleDateString() : '-'}</div>
+                              <div>~ {entry.not_after ? new Date(entry.not_after).toLocaleDateString() : '-'}</div>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              {entry.isKnownBySslMate ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>本地已知</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300" title="非当前 SSL-Mate 系统记录的序列号，请核验是否为您其他团队或渠道签发">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>外部签发</span>
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-xs text-slate-400">
+                  暂无 CT 记录显示，请输入域名查询。
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setCtModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs"
+              >
+                关闭
+              </button>
             </div>
           </div>
         </div>

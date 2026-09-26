@@ -31,6 +31,7 @@ export type CredentialType =
   | 'bt_panel'
   | 'one_panel'
   | 'safeline'
+  | 'kubernetes'
   | 'generic_webhook';
 
 export interface Credential {
@@ -70,6 +71,7 @@ export type DeployTargetType =
   | 'bt_panel'
   | 'one_panel'
   | 'safeline'
+  | 'k8s_secret'
   | 'webhook';
 
 export interface DeployTarget {
@@ -96,6 +98,12 @@ export interface DeployTarget {
     siteName?: string;
     websiteId?: string;
     
+    // Kubernetes Secret (REC-01)
+    namespace?: string;
+    secretName?: string;
+    ingressName?: string;
+    restartDeployment?: string;
+
     // Webhook
     webhookUrl?: string;
     authHeader?: string;
@@ -122,6 +130,7 @@ export interface CertTask {
   // Auto-renewal and alerts
   autoRenew: boolean;
   renewDaysBefore: number; // e.g. 30
+  alertDaysBefore?: number; // e.g. 7, 14, 30 (Default fallback: 7)
   cronExpr: string; // e.g. "0 2 * * *"
   notifyChannelIds: string[];
   
@@ -153,6 +162,8 @@ export interface Certificate {
   issuedAt: string;
   expiresAt: string;
   isRevoked: boolean;
+  ctStatus?: 'clean' | 'suspected_hijack' | 'pending';
+  lastCtCheckAt?: string;
   createdAt: string;
 }
 
@@ -180,8 +191,24 @@ export interface DomainMonitor {
   daysLeft?: number;
   lastCheckAt?: string;
   lastCheckError?: string;
+  // REC-05: OCSP Stapling & Revocation inspection
+  ocspStapling?: boolean;
+  ocspStatus?: 'good' | 'revoked' | 'unknown' | 'no_stapling';
+  ocspCheckedAt?: string;
+  ocspResponseSize?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProbeNode {
+  id: string;
+  name: string;
+  region: 'cn-north' | 'cn-east' | 'cn-south' | 'hk' | 'overseas' | 'custom';
+  endpoint?: string;
+  status: 'online' | 'offline';
+  isBuiltin: boolean;
+  lastSeenAt?: string;
+  latencyMs?: number;
 }
 
 export interface TaskExecutionLog {
@@ -208,6 +235,10 @@ export interface SystemSettings {
   };
   globalRenewCheckCron: string;
   defaultRenewDaysBefore: number;
+  defaultAlertDaysBefore?: number;
+  acmeConcurrency?: number;
+  monitorConcurrency?: number;
+  dnsResolverUrl?: string;
 }
 
 export interface DatabaseSchema {

@@ -225,9 +225,10 @@ export class CertParserService {
   /**
    * Generate PFX / PKCS#12 bundle (.pfx / .p12) supporting both RSA and ECC keys with full chain bundling
    */
-  public static exportPfx(fullchainPem: string, privkeyPem: string, password: string = ''): Buffer {
+  public static exportPfx(fullchainPem: string, privkeyPem: string, password: string = '', friendlyName?: string): Buffer {
     try {
       const certs = fullchainPem.split(/(?=-----BEGIN CERTIFICATE-----)/g).map(c => c.trim()).filter(Boolean);
+      const alias = friendlyName && friendlyName.trim() ? friendlyName.trim() : 'SSLMate Certificate';
 
       // If password provided and key is RSA, use node-forge which supports PBE encryption
       if (password && !privkeyPem.includes('EC PRIVATE KEY') && !privkeyPem.includes('namedCurve') && !privkeyPem.includes('id-ecPublicKey')) {
@@ -237,7 +238,7 @@ export class CertParserService {
 
           const p12Asn1 = forge.pkcs12.toPkcs12Asn1(keyForge, certForges, password, {
             generateLocalKeyId: true,
-            friendlyName: 'SSLMate Certificate'
+            friendlyName: alias
           });
 
           const p12Der = forge.asn1.toDer(p12Asn1).getBytes();
@@ -248,7 +249,7 @@ export class CertParserService {
       }
 
       // Resilient ASN.1 PKCS#12 builder supporting RSA & EC (P-256, P-384, etc.) and complete chain
-      return buildPkcs12(certs, privkeyPem, 'SSLMate Certificate');
+      return buildPkcs12(certs, privkeyPem, alias);
     } catch (err: any) {
       throw new Error(`PFX 生成失败: ${err.message}`);
     }

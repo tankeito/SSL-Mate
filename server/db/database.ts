@@ -17,15 +17,17 @@ class Database {
   }
 
   private getDefaultData(): DatabaseSchema {
-    // Generate default admin password hash (tqd354@gmail.com / aaAA1122)
+    const defaultUsername = process.env.DEFAULT_ADMIN_USER || 'admin';
+    const defaultEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@sslmate.local';
+    const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@SSL2026!';
     const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync('aaAA1122', salt, 100000, 64, 'sha512').toString('hex');
+    const hash = crypto.pbkdf2Sync(defaultPassword, salt, 100000, 64, 'sha512').toString('hex');
     const passwordHash = `${salt}:${hash}`;
 
     const defaultAdmin: User = {
       id: 'usr_admin_default',
-      username: 'tqd354',
-      email: 'tqd354@gmail.com',
+      username: defaultUsername,
+      email: defaultEmail,
       passwordHash: passwordHash,
       authSource: 'local',
       role: 'admin',
@@ -34,12 +36,14 @@ class Database {
       updatedAt: new Date().toISOString()
     };
 
+    const defaultAcmeEmail = process.env.DEFAULT_ACME_EMAIL || defaultEmail;
+
     const defaultAcmeAccounts: AcmeAccount[] = [
       {
         id: 'acme_letsencrypt_prod',
         name: "Let's Encrypt (Production)",
         caProvider: 'letsencrypt',
-        email: 'tqd354@gmail.com',
+        email: defaultAcmeEmail,
         directoryUrl: 'https://acme-v02.api.letsencrypt.org/directory',
         isDefault: true,
         createdAt: new Date().toISOString(),
@@ -49,7 +53,7 @@ class Database {
         id: 'acme_letsencrypt_staging',
         name: "Let's Encrypt (Staging / 测试环境)",
         caProvider: 'letsencrypt_staging',
-        email: 'tqd354@gmail.com',
+        email: defaultAcmeEmail,
         directoryUrl: 'https://acme-staging-v02.api.letsencrypt.org/directory',
         isDefault: false,
         createdAt: new Date().toISOString(),
@@ -59,7 +63,7 @@ class Database {
         id: 'acme_zerossl',
         name: 'ZeroSSL (需要 EAB 凭证)',
         caProvider: 'zerossl',
-        email: 'tqd354@gmail.com',
+        email: defaultAcmeEmail,
         directoryUrl: 'https://acme.zerossl.com/v2/DV90',
         isDefault: false,
         createdAt: new Date().toISOString(),
@@ -69,7 +73,7 @@ class Database {
         id: 'acme_google_trust',
         name: 'Google Trust Services (需要 EAB 凭证)',
         caProvider: 'google',
-        email: 'tqd354@gmail.com',
+        email: defaultAcmeEmail,
         directoryUrl: 'https://dv.acme-v02.api.pki.goog/directory',
         isDefault: false,
         createdAt: new Date().toISOString(),
@@ -86,7 +90,10 @@ class Database {
         enabled: config.authmate.enabled
       },
       globalRenewCheckCron: '0 2 * * *',
-      defaultRenewDaysBefore: 30
+      defaultRenewDaysBefore: 30,
+      defaultAlertDaysBefore: 7,
+      acmeConcurrency: config.acmeConcurrency || 3,
+      monitorConcurrency: config.monitorConcurrency || 6
     };
 
     return {
@@ -144,8 +151,13 @@ class Database {
           try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch {}
           return;
         }
-        const start = Date.now();
-        while (Date.now() - start < attempts * 30) {}
+        // Yield CPU time slice to OS thread scheduler instead of 100% busy spinning
+        try {
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, attempts * 25);
+        } catch {
+          const start = Date.now();
+          while (Date.now() - start < attempts * 20) {}
+        }
       }
     }
   }
@@ -193,7 +205,12 @@ class Database {
     });
   }
 
-  // Generic Getters
+  // Generic Getters & Full Data Access (Backup & Restore REC-06)
+  public getAllData(): DatabaseSchema { return JSON.parse(JSON.stringify(this.data)); }
+  public replaceAllData(newData: DatabaseSchema): void {
+    this.data = newData;
+    this.saveFileSync(this.data);
+  }
   public getUsers(): User[] { return this.data.users; }
   public getCredentials(): Credential[] { return this.data.credentials; }
   public getAcmeAccounts(): AcmeAccount[] { return this.data.acmeAccounts; }

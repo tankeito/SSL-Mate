@@ -1,21 +1,35 @@
 import tls from 'tls';
 import { db } from '../db/database.js';
 import { DomainMonitor } from '../db/schema.js';
+import { OcspService } from './ocsp.js';
+import { NotificationService } from './notify.js';
 
 export class DomainMonitorService {
   /**
-   * Probe an online domain HTTPS certificate
+   * Probe an online domain HTTPS certificate with OCSP Stapling & Revocation inspection
    */
   public static async inspectDomain(domain: string, port: number = 443): Promise<{
     status: 'healthy' | 'warning' | 'expired' | 'unreachable';
     issuer?: string;
     expiresAt?: string;
     daysLeft?: number;
+    ocspStapling?: boolean;
+    ocspStatus?: 'good' | 'revoked' | 'unknown' | 'no_stapling';
+    ocspResponseSize?: number;
     error?: string;
   }> {
     const cleanDomain = domain.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
 
-    return new Promise((resolve) => {
+    // Concurrently trigger OCSP Stapling detector
+    const ocspPromise = OcspService.checkDomainOcsp(cleanDomain, port);
+
+    const tlsResult = await new Promise<{
+      status: 'healthy' | 'warning' | 'expired' | 'unreachable';
+      issuer?: string;
+      expiresAt?: string;
+      daysLeft?: number;
+      error?: string;
+    }>((resolve) => {
       const socket = tls.connect({
         host: cleanDomain,
         port: port,
@@ -71,6 +85,34 @@ export class DomainMonitorService {
         });
       });
     });
+
+    let ocspRes: { ocspStapling: boolean; status: 'good' | 'revoked' | 'unknown' | 'no_stapling'; responseSize: number } = {
+      ocspStapling: false,
+      status: 'no_stapling',
+      responseSize: 0
+    };
+    try {
+      const r = await ocspPromise;
+      ocspRes = {
+        ocspStapling: r.ocspStapling,
+        status: r.status,
+        responseSize: r.responseSize || 0
+      };
+    } catch {}
+
+    // If revoked, escalate status
+    let finalStatus = tlsResult.status;
+    if (ocspRes.status === 'revoked') {
+      finalStatus = 'expired';
+    }
+
+    return {
+      ...tlsResult,
+      status: finalStatus,
+      ocspStapling: ocspRes.ocspStapling,
+      ocspStatus: ocspRes.status,
+      ocspResponseSize: ocspRes.responseSize
+    };
   }
 
   /**
@@ -85,9 +127,26 @@ export class DomainMonitorService {
         monitor.issuer = result.issuer;
         monitor.expiresAt = result.expiresAt;
         monitor.daysLeft = result.daysLeft;
+        monitor.ocspStapling = result.ocspStapling;
+        monitor.ocspStatus = result.ocspStatus;
+        monitor.ocspCheckedAt = new Date().toISOString();
+        monitor.ocspResponseSize = result.ocspResponseSize;
         monitor.lastCheckError = result.error;
         monitor.lastCheckAt = new Date().toISOString();
         db.upsertDomainMonitor(monitor);
+
+        // Emergency notification if certificate is revoked by CA
+        if (result.ocspStatus === 'revoked') {
+          console.error(`[Monitor] 🚨 域名 [${monitor.domain}] 证书已被 CA 机构正式吊销 (Revoked)！`);
+          try {
+            await NotificationService.dispatchAll({
+              event: 'expiring_soon',
+              taskName: `证书吊销紧急告警: ${monitor.domain}`,
+              domains: [monitor.domain],
+              errorMessage: `【严重告警：证书已被吊销】监控巡检发现域名 ${monitor.domain} 的线上 SSL 证书已被 CA 机构吊销 (Revoked)！浏览器将出现拦截红屏，请立即重新签发部署！`
+            });
+          } catch {}
+        }
       } catch (err: any) {
         monitor.status = 'unreachable';
         monitor.lastCheckError = err.message;

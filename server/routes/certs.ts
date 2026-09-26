@@ -92,8 +92,9 @@ const handleCertDownload = (req: AuthenticatedRequest, res: Response) => {
     case 'pfx':
     case 'p12': {
       const password = String(req.query.password || req.query.pfxPassword || '');
+      const friendlyName = String(req.query.friendlyName || cert.primaryDomain || 'SSLMate Certificate');
       try {
-        const pfxBuffer = CertParserService.exportPfx(cert.fullchainPem, privkey, password);
+        const pfxBuffer = CertParserService.exportPfx(cert.fullchainPem, privkey, password, friendlyName);
         res.setHeader('Content-Type', 'application/x-pkcs12');
         res.setHeader('Content-Disposition', `attachment; filename="${domainSlug}.pfx"`);
         return res.send(pfxBuffer);

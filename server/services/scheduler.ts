@@ -117,8 +117,9 @@ export class SchedulerService {
           const expiresTime = new Date(cert.expiresAt).getTime();
           const diffDays = Math.floor((expiresTime - now) / (1000 * 60 * 60 * 24));
 
-          // 1. Expiring soon alert (dispatched when remaining days <= 7)
-          if (diffDays <= 7 && diffDays > 0) {
+          // 1. Expiring soon alert (dispatched when remaining days <= alertDaysThreshold, default: 7)
+          const alertDaysThreshold = task.alertDaysBefore || db.getSettings()?.defaultAlertDaysBefore || 7;
+          if (diffDays <= alertDaysThreshold && diffDays > 0) {
             if (task.notifyChannelIds && task.notifyChannelIds.length > 0) {
               NotificationService.dispatch(task.notifyChannelIds, {
                 event: 'expiring_soon',

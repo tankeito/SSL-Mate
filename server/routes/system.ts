@@ -84,12 +84,24 @@ import { clearOIDCDiscoveryCache } from '../services/sso.js';
  * Update System Settings (including AuthMate OIDC SSO configuration)
  */
 router.put('/settings', requireRole(['admin']), (req: AuthenticatedRequest, res: Response) => {
-  const { authmate, globalRenewCheckCron, defaultRenewDaysBefore } = req.body;
+  const {
+    authmate,
+    globalRenewCheckCron,
+    defaultRenewDaysBefore,
+    defaultAlertDaysBefore,
+    acmeConcurrency,
+    monitorConcurrency,
+    dnsResolverUrl
+  } = req.body;
 
   const patch: any = {};
   if (authmate !== undefined) patch.authmate = authmate;
   if (globalRenewCheckCron !== undefined) patch.globalRenewCheckCron = globalRenewCheckCron;
   if (defaultRenewDaysBefore !== undefined) patch.defaultRenewDaysBefore = Number(defaultRenewDaysBefore);
+  if (defaultAlertDaysBefore !== undefined) patch.defaultAlertDaysBefore = Number(defaultAlertDaysBefore);
+  if (acmeConcurrency !== undefined) patch.acmeConcurrency = Number(acmeConcurrency);
+  if (monitorConcurrency !== undefined) patch.monitorConcurrency = Number(monitorConcurrency);
+  if (dnsResolverUrl !== undefined) patch.dnsResolverUrl = dnsResolverUrl ? String(dnsResolverUrl).trim() : undefined;
 
   const updated = db.updateSettings(patch);
 
