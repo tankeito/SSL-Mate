@@ -358,7 +358,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                         : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                     }`}
                   >
-                    <div className="font-bold text-xs">HTTP-01 验证 (REC-02)</div>
+                    <div className="font-bold text-xs">HTTP-01 挑战验证</div>
                     <div className="text-[10px] text-slate-400 mt-0.5">免 DNS API，需公网 80 端口可达单域名</div>
                   </button>
                 </div>

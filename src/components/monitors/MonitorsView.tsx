@@ -68,14 +68,14 @@ export const MonitorsView: React.FC = () => {
   const [editRemarkMonitor, setEditRemarkMonitor] = useState<DomainMonitor | null>(null);
   const [editRemarkValue, setEditRemarkValue] = useState('');
 
-  // Probe Matrix Modal (REC-04)
+  // Probe Matrix Modal
   const [probeMatrixModalOpen, setProbeMatrixModalOpen] = useState(false);
   const [probeDomainInput, setProbeDomainInput] = useState('');
   const [probePortInput, setProbePortInput] = useState(443);
   const [probeLoading, setProbeLoading] = useState(false);
   const [probeReport, setProbeReport] = useState<any | null>(null);
 
-  // CT Monitor Modal (REC-03)
+  // CT Monitor Modal
   const [ctModalOpen, setCtModalOpen] = useState(false);
   const [ctDomainInput, setCtDomainInput] = useState('');
   const [ctLoading, setCtLoading] = useState(false);
@@ -370,7 +370,7 @@ export const MonitorsView: React.FC = () => {
               handleOpenProbeMatrix(defaultDomain, monitors[0]?.port || 443);
             }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 text-xs font-bold transition-all active:scale-95 shrink-0"
-            title="多地域探针矩阵 (REC-04)"
+            title="多地域探针矩阵"
           >
             <Globe className="w-3.5 h-3.5 text-blue-600" />
             <span className="hidden sm:inline">探针矩阵</span>
@@ -382,7 +382,7 @@ export const MonitorsView: React.FC = () => {
               handleOpenCtLogs(defaultDomain);
             }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/60 text-xs font-bold transition-all active:scale-95 shrink-0"
-            title="CT 证书透明度日志监控 (REC-03)"
+            title="CT 证书透明度日志监控"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
             <span className="hidden sm:inline">CT 日志</span>
@@ -596,7 +596,7 @@ export const MonitorsView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* OCSP Stapling Status (REC-05) */}
+                  {/* OCSP Stapling Status */}
                   <div className="text-[11px] text-slate-400 truncate flex items-center justify-between pt-0.5">
                     <span>OCSP 装订:</span>
                     {m.ocspStatus === 'good' ? (
@@ -633,14 +633,14 @@ export const MonitorsView: React.FC = () => {
                     <button
                       onClick={() => handleOpenProbeMatrix(m.domain, m.port)}
                       className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
-                      title="多地域探针矩阵 (REC-04)"
+                      title="多地域探针矩阵"
                     >
                       <Globe className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleOpenCtLogs(m.domain)}
                       className="p-1.5 rounded-lg text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
-                      title="CT 日志与防劫持 (REC-03)"
+                      title="CT 证书透明度日志监控"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
                     </button>
@@ -783,14 +783,14 @@ export const MonitorsView: React.FC = () => {
                           <button
                             onClick={() => handleOpenProbeMatrix(m.domain, m.port)}
                             className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
-                            title="多地域探针矩阵 (REC-04)"
+                            title="多地域探针矩阵"
                           >
                             <Globe className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleOpenCtLogs(m.domain)}
                             className="p-1.5 rounded-lg text-purple-500 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
-                            title="CT 日志与防劫持 (REC-03)"
+                            title="CT 证书透明度日志监控"
                           >
                             <ShieldCheck className="w-3.5 h-3.5" />
                           </button>
@@ -1143,7 +1143,7 @@ export const MonitorsView: React.FC = () => {
           </div>
         </div>
       )}
-      {/* REC-04: Probe Matrix Modal */}
+      {/* Probe Matrix Modal */}
       {probeMatrixModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl p-6 space-y-5 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col">
@@ -1153,11 +1153,8 @@ export const MonitorsView: React.FC = () => {
                   <Globe className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                    <span>多地域 TLS 探针矩阵巡检</span>
-                    <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                      REC-04
-                    </span>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    多地域 TLS 探针矩阵巡检
                   </h3>
                   <p className="text-xs text-slate-400">
                     从华北、华东、华南、香港与欧美 5 大分布式边缘节点并发握手探测，校验指纹一致性与网络延迟
@@ -1328,7 +1325,7 @@ export const MonitorsView: React.FC = () => {
         </div>
       )}
 
-      {/* REC-03: CT Logs & Anti-Hijack Modal */}
+      {/* CT Logs & Anti-Hijack Modal */}
       {ctModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl p-6 space-y-5 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col">
@@ -1338,11 +1335,8 @@ export const MonitorsView: React.FC = () => {
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                    <span>Certificate Transparency (CT) 证书透明度审计</span>
-                    <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                      REC-03
-                    </span>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    Certificate Transparency (CT) 证书透明度审计
                   </h3>
                   <p className="text-xs text-slate-400">
                     检索公开 crt.sh 归档记录并核验本地已知证书库，主动防范未授权颁发或伪造劫持

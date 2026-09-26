@@ -7,7 +7,7 @@
   <p>告别繁琐易错的流程图连线，声明式 3 步向导配置全自动域名证书申请、全球 DNS 预检、多端部署与临期自动续期。</p>
 
   <p>
-    <a href="https://github.com/tankeito/SSL-Mate/releases"><img src="https://img.shields.io/badge/Release-v1.1.0-10b981?style=flat-square&logo=github" alt="Release" /></a>
+    <a href="https://github.com/tankeito/SSL-Mate/releases"><img src="https://img.shields.io/badge/Release-v1.2.0-10b981?style=flat-square&logo=github" alt="Release" /></a>
     <a href="https://hub.docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=flat-square&logo=docker" alt="Docker Ready" /></a>
     <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-Strict%20Mode-3178c6?style=flat-square&logo=typescript" alt="TypeScript Strict" /></a>
     <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.x-61dafb?style=flat-square&logo=react" alt="React 19" /></a>
@@ -61,9 +61,13 @@
 | **全自动证书生命周期** | 支持证书全自动申请、到期前 30 天（可自定义）自动巡检续期、证书链解析归档与吊销（Revoke）。 |
 | **主流 CA 机构支持** | 原生兼容 Let's Encrypt (生产与 Staging)、ZeroSSL (EAB 凭据支持)、Google Trust Services (Google Public CA) 及自建 RFC 8555 兼容端点。 |
 | **现代密钥算法** | 支持主流高强度椭圆曲线算法 `ECC P-256` (推荐)、`ECC P-384` 以及传统 `RSA 2048`、`RSA 4096`。 |
-| **DNS-01 自动化验证** | 集成 Cloudflare、阿里云 DNS、腾讯云 DNSPod、华为云 DNS 等主流 DNS 解析服务商，支持泛域名 `*.example.com` 申请。 |
-| **多目标分发与部署** | 一键自动部署至本地目录（配合重载脚本）、远程 SSH/SFTP 服务器、阿里云 CDN/DCDN、腾讯云 CDN、Cloudflare SSL、宝塔面板、1Panel、雷池 SafeLine WAF 及通用 Webhook。 |
+| **双模验证通道** | 支持主流云厂商 DNS-01 自动化验证（泛域名 `*.example.com`）与内置轻量独立 HTTP-01 验证服务（单域名免 API 挑战）。 |
+| **多目标分发与云原生** | 一键自动部署至本地目录（配合重载脚本）、远程 SSH/SFTP 服务器、Kubernetes 集群 (Secret/Ingress/Deployment)、阿里云 CDN/DCDN、腾讯云 CDN、Cloudflare SSL、宝塔面板、1Panel、雷池 SafeLine WAF 及通用 Webhook。 |
 | **全网域名监控探针** | 批量导入线上公网 HTTPS 域名，定时发起 TLS 握手探针，实时检测远程证书链有效性、颁发者与剩余有效天数。 |
+| **多地域分布式探针矩阵** | 预置华北、华东、华南、香港、欧美等分布式虚拟边缘探针，支持跨地域并发 TLS 握手、延迟测速与证书指纹一致性比对。 |
+| **CT 证书透明度审计** | 对接国际 Certificate Transparency 日志系统，全网检索域名公开签发记录，智能识别未授权外部证书并实时预警防劫持。 |
+| **OCSP Stapling 嗅探** | 自动嗅探服务器 TLS 握手 OCSP 装订凭据与 CA 吊销状态（Good / Revoked / Unknown），规避握手延迟与隐私泄露。 |
+| **系统全量加密灾备** | 支持 PBKDF2 (100,000轮迭代) + AES-256-GCM 硬件级密文一键打包导出全量凭据与配置，并支持本地即时快照与原子还原。 |
 | **多通道告警推送** | 支持钉钉机器人（加签）、飞书机器人（签名校验）、企业微信机器人、Telegram Bot、自定义 Webhook，任务成功/失败/临期即时触达。 |
 | **用户与权限控制 (RBAC)** | 多角色权限体系（超级管理员、运维操作员、只读审计员），支持用户启停、密码重置与安全防护。 |
 | **实时日志与审计** | 实时 SSE (Server-Sent Events) 日志流管道，完整记录每一步 ACME 交互、DNS 记录添加与远程部署执行详情。 |
@@ -76,7 +80,7 @@
 graph TB
     subgraph Client["客户端层 (Presentation Layer)"]
         Browser["PC Web 管理控制台<br/>(React 19 + Tailwind v4)"]
-        Mobile["移动端自适应控制台<br/>(Drawer Navigation)"]
+        Mobile["移动端自适应控制台<br/>(Touch & Drawer Navigation)"]
     end
 
     subgraph Auth["认证与授权 (Authentication)"]
@@ -86,16 +90,19 @@ graph TB
 
     subgraph Server["核心服务引擎 (Core Engine :8989)"]
         Router["RESTful API / SSE Live Stream"]
+        HttpChallenge["RFC 8555 HTTP-01 验证网关<br/>(/.well-known/acme-challenge)"]
         Scheduler["智能定时巡检调度器<br/>(Croner Scheduler)"]
         Orchestrator["声明式证书编排引擎<br/>(Cert Orchestrator)"]
-        MonitorEngine["公网 TLS 握手监控探针<br/>(TLS Probe Engine)"]
+        ProbeMatrix["多地域分布式探针矩阵 & OCSP 嗅探<br/>(Multi-Region Matrix & OCSP)"]
+        CTAudit["CT 证书透明度审计与防劫持<br/>(crt.sh & Fallback Audit)"]
+        BackupEngine["PBKDF2 + AES-256-GCM 灾备归档<br/>(Snapshots & Hot Restore)"]
         CryptoVault[("AES-256-GCM 凭据加密保险箱")]
     end
 
     subgraph ExternalServices["外部生态集成 (Ecosystem)"]
         CA["ACME CA 机构<br/>(Let's Encrypt / ZeroSSL / Google)"]
         DNS["DNS 服务商 API<br/>(Cloudflare / 阿里云 / 腾讯云 / 华为云)"]
-        DeployTargets["多端部署目标<br/>(SSH / 本地文件 / CDN / 宝塔 / 1Panel / Webhook)"]
+        DeployTargets["多端云原生部署目标<br/>(Kubernetes / SSH / CDN / 面板 / Webhook)"]
         NotifyChannels["告警推送通道<br/>(钉钉 / 飞书 / 企微 / Telegram)"]
     end
 
@@ -105,8 +112,11 @@ graph TB
     Auth --> SSO
     Auth --> LocalAuth
     Router --> Orchestrator
+    Router --> HttpChallenge
+    Router --> BackupEngine
     Scheduler --> Orchestrator
-    Scheduler --> MonitorEngine
+    Scheduler --> ProbeMatrix
+    Scheduler --> CTAudit
     Orchestrator --> CryptoVault
     Orchestrator --> CA
     Orchestrator --> DNS
@@ -160,6 +170,7 @@ graph TB
 | 目标类型 | 适用场景 | 核心参数与能力 |
 | :--- | :--- | :--- |
 | **本地文件 (Local)** | 同机部署 Nginx / Apache / Caddy | 自定义文件输出路径、证书合并模式、本地 Shell 重载命令 |
+| **Kubernetes (K8s Secret)** | 云原生 K8s / K3s 集群 | 集群 API 地址、Namespace、Secret 名字 (`kubernetes.io/tls`)、Ingress 联动规则、Deployment 滚动更新 |
 | **远程 SSH / SFTP** | 远程 Linux 服务器集群 | 主机地址、SSH 端口、用户名、密码/私钥、目标目录、远程 Post 命令 |
 | **阿里云 CDN** | 阿里云全站加速与 CDN 域名 | AccessKey 凭证、CDN 加速域名证书更新 |
 | **腾讯云 CDN** | 腾讯云全站加速 / CDN 域名 | SecretId 凭证、CDN 加速域名一键更新 |
@@ -360,6 +371,34 @@ SSL-Mate 原生内置对 **AuthMate** (及兼容 OIDC/OAuth2 标准的 IdP 提�
 ---
 
 ## 🌟 版本更新说明 (Release Notes)
+
+### 🚀 v1.2.0 (Enterprise Architecture & Resilience Milestone)
+
+- ☸️ **Kubernetes 云原生 Secret 同步与 Ingress 联动编排**：
+  - 支持将签发证书自动化同步至 Kubernetes 集群 `Secret`（类型为 `kubernetes.io/tls`）；
+  - 自动绑定关联对应 Ingress 的 TLS 域名规则，并可配置触发关联 Deployment（如 `ingress-nginx-controller`）平滑滚动更新。
+- 🌐 **独立 RFC 8555 HTTP-01 挑战验证服务**：
+  - 原生内置 `/.well-known/acme-challenge/:token` 轻量级挑战验证网关；
+  - 针对无 DNS API 权限、单域名或自建机房环境，提供无需任何外部 DNS 凭据的极速签发通道。
+- 🛡️ **CT 证书透明度日志审计与实时防劫持监控**：
+  - 对接国际公开证书透明度 (Certificate Transparency) 账本，全域检索域名公网签发历史；
+  - 创新打造“公网 CT + 实时探针现网证书 + 本地已知证书”多级降级兜底机制，彻底解决公网 `crt.sh` 超时与三级子域通配符检索空白问题；
+  - 智能识别未通过本系统管理的“外部未授权签发”证书，提供实时劫持风险警报。
+- 🗺️ **多地域分布式 TLS 探针矩阵 (Probe Matrix)**：
+  - 预置华北、华东、华南、香港、欧美等分布式虚拟边缘探针，并支持管理员动态接入自定义探针 Agent；
+  - 跨地域多节点高并发 TLS 握手探测，输出各区域真实握手延迟，并自动校验全网证书指纹 SHA-256 一致性，防范 CDN 缓存脏节点或线路劫持。
+- ⚡ **自动化 OCSP Stapling 状态嗅探与吊销预警**：
+  - 全网探针自动化解析 TLS 握手阶段携带的 OCSP DER 凭证；
+  - 实时标记服务器【未装订 / 正常装订 / 已吊销!】状态，兼顾隐私安全与握手提速，遇到吊销证书即刻触发最高等级警报。
+- 🔐 **PBKDF2 + AES-256-GCM 硬件级系统全量加密灾备与本地快照**：
+  - 支持基于管理员密码进行 PBKDF2 (100,000 轮迭代) 派生密钥与 AES-256-GCM 硬件级密文打包导出全量凭据、任务、配置与历史证书；
+  - 提供本地即时快照管理，支持在线解密校验与一键原子无损热还原，确保企业灾难演练与极速重建。
+- 🧹 **代码硬编码隐患治理与 REC 标识全量清理**：
+  - 全面完成 HC-01 ~ HC-15 硬编码隐患深度治理（解耦系统环境变量、消除本地路径硬编码）；
+  - 彻底清理测试阶段遗留的 `REC-xx` 标签，打造规范清爽的企业级用户交互与代码库。
+- 📱 **UI/UX 深度重构与移动端双端适配**：
+  - 重塑【系统设置与 AuthMate SSO】页面，采用左右分栏与上下弹性流式布局，填补空白区域，补充 SSO 状态卡、系统核心指标与安全架构看板；
+  - 修复已过期与临期证书计算临界点，优化全平台响应式体验。
 
 ### 🚀 v1.1.0 (Enterprise Quality & Hardening Milestone)
 

@@ -98,7 +98,7 @@ export interface DeployTarget {
     siteName?: string;
     websiteId?: string;
     
-    // Kubernetes Secret (REC-01)
+    // Kubernetes Secret
     namespace?: string;
     secretName?: string;
     ingressName?: string;
@@ -191,7 +191,7 @@ export interface DomainMonitor {
   daysLeft?: number;
   lastCheckAt?: string;
   lastCheckError?: string;
-  // REC-05: OCSP Stapling & Revocation inspection
+  // OCSP Stapling & Revocation inspection
   ocspStapling?: boolean;
   ocspStatus?: 'good' | 'revoked' | 'unknown' | 'no_stapling';
   ocspCheckedAt?: string;

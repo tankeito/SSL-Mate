@@ -102,7 +102,7 @@ export class BackupService {
 
       return {
         sslmateBackup: true,
-        version: '1.1.0',
+        version: '1.2.0',
         isEncrypted: true,
         kdf: 'pbkdf2-sha512',
         iterations: 100000,
@@ -117,7 +117,7 @@ export class BackupService {
     } else {
       return {
         sslmateBackup: true,
-        version: '1.1.0',
+        version: '1.2.0',
         isEncrypted: false,
         payload: payloadJson,
         checksumSha256,

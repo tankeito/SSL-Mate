@@ -205,7 +205,7 @@ class Database {
     });
   }
 
-  // Generic Getters & Full Data Access (Backup & Restore REC-06)
+  // Generic Getters & Full Data Access (Backup & Restore)
   public getAllData(): DatabaseSchema { return JSON.parse(JSON.stringify(this.data)); }
   public replaceAllData(newData: DatabaseSchema): void {
     this.data = newData;

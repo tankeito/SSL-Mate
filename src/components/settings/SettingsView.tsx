@@ -35,7 +35,7 @@ export const SettingsView: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Backup & Disaster Recovery (REC-06)
+  // Backup & Disaster Recovery
   const [backupPassword, setBackupPassword] = useState('');
   const [restorePassword, setRestorePassword] = useState('');
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -191,7 +191,7 @@ export const SettingsView: React.FC = () => {
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>系统设置与 AuthMate SSO</span>
             <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/60 font-mono">
-              v1.1.0 Enterprise
+              v1.2.0 Enterprise
             </span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -459,7 +459,7 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Disaster Recovery & Encrypted Backup Panel (REC-06) */}
+          {/* 3. Disaster Recovery & Encrypted Backup Panel */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
@@ -467,7 +467,7 @@ export const SettingsView: React.FC = () => {
                   <Archive className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">系统全量加密灾备与归档恢复 (REC-06)</h3>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">系统全量加密灾备与归档恢复</h3>
                   <p className="text-xs text-slate-400">支持基于 PBKDF2-SHA512 + AES-256-GCM 硬件级密文一键打包导出与无损热还原</p>
                 </div>
               </div>

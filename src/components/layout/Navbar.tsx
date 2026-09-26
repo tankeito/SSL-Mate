@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2">
             <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">SSL-Mate</h1>
             <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
-              证书伴侣 v1.1.0
+              证书伴侣 v1.2.0
             </span>
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">极简自动化 SSL 证书生命周期管理平台</p>

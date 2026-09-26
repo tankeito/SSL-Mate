@@ -107,17 +107,17 @@ export const api = {
   getSettings: () => request<any>('/system/settings'),
   updateSettings: (data: any) => request('/system/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
-  // Backup & Restore (REC-06)
+  // Disaster Recovery Backup & Restore
   exportBackup: (password?: string) => request<any>('/backup/export', { method: 'POST', body: JSON.stringify({ password }) }),
   restoreBackup: (backupContent: string, password?: string) => request<any>('/backup/restore', { method: 'POST', body: JSON.stringify({ backupContent, password }) }),
   createSnapshot: (label?: string) => request<any>('/backup/snapshots', { method: 'POST', body: JSON.stringify({ label }) }),
   getSnapshots: () => request<any>('/backup/snapshots'),
 
-  // CT Monitor (REC-03)
+  // Certificate Transparency (CT) Monitor
   getCtLogs: (domain: string) => request<any>(`/ct-monitor/logs?domain=${encodeURIComponent(domain)}`),
   scanCt: (domain?: string) => request<any>('/ct-monitor/scan', { method: 'POST', body: JSON.stringify({ domain }) }),
 
-  // Probe Matrix (REC-04)
+  // Multi-Region Distributed TLS Probe Matrix
   getProbeNodes: () => request<any>('/probes/nodes'),
   probeMatrix: (domain: string, port = 443) => request<any>('/probes/matrix-check', { method: 'POST', body: JSON.stringify({ domain, port }) })
 };

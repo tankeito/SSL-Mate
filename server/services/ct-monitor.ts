@@ -43,25 +43,43 @@ export class CtMonitorService {
     );
 
     let rawEntries: any[] = [];
+    const queryTerm = cleanDomain.startsWith('www.') ? cleanDomain.slice(4) : cleanDomain;
+
     try {
-      const url = `https://crt.sh/?q=%.${encodeURIComponent(cleanDomain)}&output=json`;
-      const res = await fetch(url, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'SSL-Mate-CT-Scanner/1.1.0' },
+      // 1. Direct query by cleanDomain
+      let url = `https://crt.sh/?q=${encodeURIComponent(cleanDomain)}&output=json`;
+      let res = await fetch(url, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; SSL-Mate-CT/1.2.0)' },
         signal: AbortSignal.timeout(6000)
       });
 
       if (res.ok) {
-        rawEntries = await res.json() as any[];
+        try { rawEntries = await res.json() as any[]; } catch {}
+      }
+
+      // 2. If empty and domain was www.something, try apex domain
+      if ((!Array.isArray(rawEntries) || rawEntries.length === 0) && queryTerm !== cleanDomain) {
+        url = `https://crt.sh/?q=${encodeURIComponent(queryTerm)}&output=json`;
+        res = await fetch(url, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; SSL-Mate-CT/1.2.0)' },
+          signal: AbortSignal.timeout(6000)
+        });
+        if (res.ok) {
+          try { rawEntries = await res.json() as any[]; } catch {}
+        }
       }
     } catch {
-      // Offline fallback: simulate or use local certs if crt.sh is rate-limited or offline
+      // Offline / timeout fallback
     }
 
     if (!Array.isArray(rawEntries) || rawEntries.length === 0) {
-      // Return simulated known CT records from local repository if crt.sh is unreachable
+      // Return simulated known CT records from local repository & domain monitors
       const matchingLocal = localCerts.filter(c => 
-        c.primaryDomain.includes(cleanDomain) || c.sanDomains.some(s => s.includes(cleanDomain))
+        c.primaryDomain.toLowerCase().includes(cleanDomain) ||
+        cleanDomain.includes(c.primaryDomain.toLowerCase()) ||
+        c.sanDomains.some(s => s.toLowerCase().includes(cleanDomain) || cleanDomain.includes(s.toLowerCase()))
       );
+
       const simulated: CtLogEntry[] = matchingLocal.map((c, idx) => ({
         id: 10000000 + idx,
         issuer_name: c.issuer,
@@ -73,6 +91,31 @@ export class CtMonitorService {
         serial_number: c.serialNumber,
         isKnownBySslMate: true
       }));
+
+      // Also check active monitored domains in SSL-Mate
+      const monitors = db.getDomainMonitors();
+      const matchingMonitors = monitors.filter(m => 
+        m.domain.toLowerCase() === cleanDomain ||
+        cleanDomain.includes(m.domain.toLowerCase()) ||
+        m.domain.toLowerCase().includes(cleanDomain)
+      );
+
+      for (let i = 0; i < matchingMonitors.length; i++) {
+        const m = matchingMonitors[i];
+        if (m.issuer) {
+          simulated.push({
+            id: 20000000 + i,
+            issuer_name: m.issuer,
+            common_name: m.domain,
+            name_value: m.domain,
+            entry_timestamp: m.lastCheckAt || new Date().toISOString(),
+            not_before: new Date(Date.now() - (90 - (m.daysLeft || 60)) * 86400000).toISOString(),
+            not_after: m.expiresAt || new Date(Date.now() + (m.daysLeft || 60) * 86400000).toISOString(),
+            serial_number: `live_${m.domain.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            isKnownBySslMate: false
+          });
+        }
+      }
 
       this.cache.set(cleanDomain, { data: simulated, timestamp: Date.now() });
       return simulated;
