@@ -132,7 +132,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
             type === 'ssh' ? '远程 SSH 主机' :
             type === 'bt_panel' ? '宝塔面板站点' :
             type === 'one_panel' ? '1Panel 网站' :
-            type === 'aliyun_cdn' ? '阿里云 CDN/HTTPS' :
+            type === 'aliyun_cdn' ? '阿里云 CDN / 全站加速(DCDN)' :
             type === 'cloudflare' ? 'Cloudflare Custom SSL' :
             type === 'webhook' ? '通用 Webhook' : '自定义目标',
       enabled: true,
@@ -160,10 +160,44 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
     setDeployTargets(deployTargets.map(t => t.id === id ? { ...t, config: { ...t.config, ...configUpdates } } : t));
   };
 
+  function sanitizeDomainInput(input: string): string {
+    if (!input) return '';
+    let domain = input.trim().toLowerCase();
+    domain = domain.replace(/^[a-zA-Z]+:\/\//, '');
+    if (domain.includes('@')) {
+      domain = domain.split('@').pop() || '';
+    }
+    domain = domain.split(/[\/\?\#]/)[0];
+    if (!domain.startsWith('[')) {
+      domain = domain.split(':')[0];
+    }
+    const isWildcard = domain.startsWith('*.');
+    if (isWildcard) {
+      domain = domain.slice(2);
+    }
+    domain = domain.replace(/^[\.\s\/\\]+|[\.\s\/\\]+$/g, '');
+    if (isWildcard && domain) {
+      domain = `*.${domain}`;
+    }
+    return domain;
+  }
+
   const parsedDomains = domainsInput
     .split(/[\n,;\s]+/)
-    .map(d => d.trim().toLowerCase())
+    .map(d => sanitizeDomainInput(d))
     .filter(Boolean);
+
+  const handleDomainBlur = () => {
+    if (!domainsInput.trim()) return;
+    const cleaned = domainsInput
+      .split(/[\n,;\s]+/)
+      .map(d => sanitizeDomainInput(d))
+      .filter(Boolean)
+      .join('\n');
+    if (cleaned && cleaned !== domainsInput.trim()) {
+      setDomainsInput(cleaned);
+    }
+  };
 
   const handleSave = async () => {
     if (!taskName.trim()) {
@@ -174,6 +208,17 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
 
     if (parsedDomains.length === 0) {
       setError('请至少填写一个主域名');
+      setStep(1);
+      return;
+    }
+
+    const invalidDomain = parsedDomains.find(d => {
+      let testDomain = d.startsWith('*.') ? d.slice(2) : d;
+      return !testDomain || testDomain.includes('*') || testDomain.split('.').length < 2 || testDomain.includes('/') || testDomain.includes(':');
+    });
+
+    if (invalidDomain) {
+      setError(`域名格式不符合规范: [${invalidDomain}]。请填写纯域名（例如 key.btc354.com 或 *.btc354.com），无需包含 http:// 或路径。`);
       setStep(1);
       return;
     }
@@ -306,11 +351,12 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   rows={3}
                   value={domainsInput}
                   onChange={e => setDomainsInput(e.target.value)}
-                  placeholder="example.com&#10;*.example.com&#10;api.example.com"
+                  onBlur={handleDomainBlur}
+                  placeholder="key.btc354.com&#10;*.btc354.com&#10;api.btc354.com"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  支持多域名证书与通配符泛域名 (如 *.ap1x.xyz)，每行一个域名或逗号隔开
+                  💡 支持多域名与通配符泛域名 (如 *.btc354.com)；若直接粘贴完整网址，系统将自动去除 https:// 与路径后缀。
                 </p>
               </div>
 
@@ -472,7 +518,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
                   >
                     <Cloud className="w-3.5 h-3.5 text-amber-600" />
-                    <span>+ CDN</span>
+                    <span>+ 阿里云 CDN/DCDN</span>
                   </button>
                   <button
                     type="button"
@@ -662,7 +708,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                     )}
 
                     {target.type === 'aliyun_cdn' && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                         <div>
                           <label className="block text-slate-500 mb-1">阿里云 API 凭据</label>
                           <select
@@ -677,12 +723,25 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                           </select>
                         </div>
                         <div>
-                          <label className="block text-slate-500 mb-1">CDN 加速域名</label>
+                          <label className="block text-slate-500 mb-1">加速产品类型</label>
+                          <select
+                            value={target.config.product || 'auto'}
+                            onChange={e => updateDeployTargetConfig(target.id, { product: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="auto">自动识别 (DCDN/CDN)</option>
+                            <option value="dcdn">全站加速 DCDN</option>
+                            <option value="cdn">标准 CDN</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1">加速域名</label>
                           <input
                             type="text"
                             value={target.config.domain || ''}
                             onChange={e => updateDeployTargetConfig(target.id, { domain: e.target.value })}
-                            placeholder="cdn.example.com"
+                            onBlur={e => updateDeployTargetConfig(target.id, { domain: e.target.value.trim().replace(/^https?:\/\//i, '').split('/')[0] })}
+                            placeholder="key.example.com"
                             className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
                           />
                         </div>

@@ -454,6 +454,30 @@ class Database {
     }
   }
 
+  public deleteExecutionLog(logId: string): boolean {
+    const idx = this.data.executionLogs.findIndex(l => l.id === logId);
+    if (idx >= 0) {
+      this.data.executionLogs.splice(idx, 1);
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  public clearExecutionLogs(options?: { taskId?: string; status?: string }): number {
+    const initialLen = this.data.executionLogs.length;
+    this.data.executionLogs = this.data.executionLogs.filter(l => {
+      if (options?.taskId && l.taskId !== options.taskId) return true;
+      if (options?.status && l.status !== options.status) return true;
+      return false;
+    });
+    const removed = initialLen - this.data.executionLogs.length;
+    if (removed > 0) {
+      this.save();
+    }
+    return removed;
+  }
+
   // Settings
   public updateSettings(settings: Partial<SystemSettings>): SystemSettings {
     const current = this.data.settings;

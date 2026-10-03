@@ -10,7 +10,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  FileSearch
+  FileSearch,
+  Trash2
 } from 'lucide-react';
 import { DashboardStats, CertTask } from '../../types';
 import { api } from '../../api/client';
@@ -31,7 +32,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onOpenInspectModal,
   onOpenLiveLogs
 }) => {
-  const { toast } = useModal();
+  const { toast, confirm } = useModal();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tasks, setTasks] = useState<CertTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,45 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   const handleManualCheck = () => {
     fetchData(true);
+  };
+
+  const handleDeleteLog = async (e: React.MouseEvent, logId: string, taskName: string) => {
+    e.stopPropagation();
+    const ok = await confirm({
+      title: '确认删除执行记录',
+      message: `确定要删除任务「${taskName}」的此条执行记录吗？删除后不可恢复。`,
+      confirmText: '确认删除',
+      cancelText: '取消',
+      type: 'danger'
+    });
+    if (!ok) return;
+
+    try {
+      await api.deleteExecutionLog(logId);
+      toast.success('执行记录已删除');
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || '删除记录失败');
+    }
+  };
+
+  const handleClearFailedLogs = async () => {
+    const ok = await confirm({
+      title: '确认清空失败日志',
+      message: '确定要一键清空所有执行失败的日志记录吗？',
+      confirmText: '确认清空',
+      cancelText: '取消',
+      type: 'warning'
+    });
+    if (!ok) return;
+
+    try {
+      const res = await api.clearExecutionLogs('failed');
+      toast.success(res.message || '已清空失败日志');
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || '清空失败');
+    }
   };
 
   if (loading) {
@@ -283,7 +323,19 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <Layers className="w-5 h-5 text-emerald-500" />
               <h3 className="font-bold text-slate-900 dark:text-white text-base">最近自动化执行日志</h3>
             </div>
-            <span className="text-xs text-slate-400">实时更新</span>
+            <div className="flex items-center gap-2">
+              {stats?.recentLogs && stats.recentLogs.some(l => l.status === 'failed') && (
+                <button
+                  onClick={handleClearFailedLogs}
+                  title="一键清空所有失败执行记录"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-800/60 rounded-lg transition-colors shadow-2xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>清空失败</span>
+                </button>
+              )}
+              <span className="text-xs text-slate-400">实时更新</span>
+            </div>
           </div>
 
           <div className="mt-4 space-y-3">
@@ -292,13 +344,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 暂无执行记录，当任务触发续期或手动运行时将在此展示。
               </div>
             ) : (
-              stats.recentLogs.slice(0, 5).map(log => (
+              stats.recentLogs.slice(0, 10).map(log => (
                 <div 
                   key={log.id} 
                   onClick={() => onOpenLiveLogs(log.taskId, log.taskName)}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
                     {log.status === 'success' ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     ) : log.status === 'failed' ? (
@@ -306,23 +358,33 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                     ) : (
                       <RefreshCw className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
                     )}
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{log.taskName}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{log.taskName}</h4>
                       <p className="text-[11px] text-slate-400">
                         {new Date(log.startedAt).toLocaleTimeString()} · 耗时 {(log.durationMs / 1000).toFixed(1)}s · {log.triggerType === 'auto_cron' ? '定时巡检' : '手动执行'}
                       </p>
                     </div>
                   </div>
 
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                    log.status === 'success'
-                      ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300'
-                      : log.status === 'failed'
-                        ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300'
-                        : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300'
-                  }`}>
-                    {log.status === 'success' ? '成功' : log.status === 'failed' ? '失败' : '执行中'}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                      log.status === 'success'
+                        ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300'
+                        : log.status === 'failed'
+                          ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300'
+                          : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300'
+                    }`}>
+                      {log.status === 'success' ? '成功' : log.status === 'failed' ? '失败' : '执行中'}
+                    </span>
+
+                    <button
+                      onClick={(e) => handleDeleteLog(e, log.id, log.taskName)}
+                      title="删除该条记录"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/80 transition-colors opacity-80 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}

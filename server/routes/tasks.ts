@@ -4,6 +4,7 @@ import { db } from '../db/database.js';
 import { CertTask } from '../db/schema.js';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../services/auth.js';
 import { TaskOrchestrator } from '../services/orchestrator.js';
+import { sanitizeDomain, isValidDomain } from '../services/domain-sanitizer.js';
 
 function hasLocalReloadCommand(deployTargets: any[]): boolean {
   if (!Array.isArray(deployTargets)) return false;
@@ -91,7 +92,19 @@ router.post('/', requireRole(['admin', 'operator']), (req: AuthenticatedRequest,
     return res.status(403).json({ error: '权限不足：配置本地服务重载命令 (reloadCommand) 涉及宿主机系统执行权限，仅系统管理员 (admin) 允许配置' });
   }
 
-  const cleanDomains = domains.map((d: string) => d.trim().toLowerCase()).filter(Boolean);
+  const cleanDomains = domains.map((d: string) => sanitizeDomain(d)).filter(Boolean);
+
+  if (cleanDomains.length === 0) {
+    return res.status(400).json({ error: '请至少提供一个有效的申请域名' });
+  }
+
+  for (const d of cleanDomains) {
+    if (!isValidDomain(d)) {
+      return res.status(400).json({
+        error: `域名格式不符合 ACME 规范: [${d}]。请填写纯域名（例如 key.btc354.com 或 *.btc354.com），无需包含 http:// 或路径。`
+      });
+    }
+  }
 
   const newTask: CertTask = {
     id: `task_${crypto.randomBytes(8).toString('hex')}`,
@@ -149,7 +162,18 @@ router.put('/:id', requireRole(['admin', 'operator']), (req: AuthenticatedReques
 
   if (name) task.name = name;
   if (domains && Array.isArray(domains)) {
-    task.domains = domains.map((d: string) => d.trim().toLowerCase()).filter(Boolean);
+    const cleanDomains = domains.map((d: string) => sanitizeDomain(d)).filter(Boolean);
+    if (cleanDomains.length === 0) {
+      return res.status(400).json({ error: '请至少提供一个有效的申请域名' });
+    }
+    for (const d of cleanDomains) {
+      if (!isValidDomain(d)) {
+        return res.status(400).json({
+          error: `域名格式不符合 ACME 规范: [${d}]。请填写纯域名（例如 key.btc354.com 或 *.btc354.com），无需包含 http:// 或路径。`
+        });
+      }
+    }
+    task.domains = cleanDomains;
   }
   if (acmeAccountId) task.acmeAccountId = acmeAccountId;
   if (dnsCredentialId !== undefined) task.dnsCredentialId = dnsCredentialId;
@@ -209,6 +233,28 @@ router.post('/:id/run', requireRole(['admin', 'operator']), async (req: Authenti
 router.get('/:id/logs', (req: AuthenticatedRequest, res: Response) => {
   const logs = db.getExecutionLogs(String(req.params.id));
   return res.json(logs);
+});
+
+/**
+ * Delete a single execution log by ID
+ */
+router.delete('/logs/:logId', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
+  const logId = String(req.params.logId);
+  const success = db.deleteExecutionLog(logId);
+  if (!success) {
+    return res.status(404).json({ error: '执行记录不存在或已被删除' });
+  }
+  return res.json({ success: true, message: '执行日志记录已成功删除' });
+});
+
+/**
+ * Clear execution logs (e.g., status=failed or by taskId)
+ */
+router.delete('/logs', requireRole(['admin', 'operator']), (req: AuthenticatedRequest, res: Response) => {
+  const status = req.query.status ? String(req.query.status) : undefined;
+  const taskId = req.query.taskId ? String(req.query.taskId) : undefined;
+  const count = db.clearExecutionLogs({ status, taskId });
+  return res.json({ success: true, count, message: `已成功清空 ${count} 条执行记录` });
 });
 
 export default router;

@@ -93,6 +93,7 @@ export interface DeployTarget {
     zoneId?: string;
     certName?: string;
     region?: string;
+    product?: 'auto' | 'dcdn' | 'cdn' | string;
     
     // Panels
     siteName?: string;

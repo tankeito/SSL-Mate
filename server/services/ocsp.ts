@@ -92,7 +92,7 @@ export class OcspService {
           timeout: 6000
         }, () => {
           setTimeout(() => {
-            try { socket.end(); } catch {}
+            try { socket.destroy(); } catch {}
 
             if (ocspResponseBuffer && ocspResponseBuffer.length > 0) {
               const parsed = this.parseOcspResponse(ocspResponseBuffer);

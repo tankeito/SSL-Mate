@@ -66,6 +66,14 @@ export const api = {
   deleteTask: (id: string) => request(`/tasks/${id}`, { method: 'DELETE' }),
   runTask: (id: string) => request<{ success: boolean; message: string; taskId: string }>(`/tasks/${id}/run`, { method: 'POST' }),
   getTaskLogs: (id: string) => request<any[]>(`/tasks/${id}/logs`),
+  deleteExecutionLog: (logId: string) => request<{ success: boolean; message: string }>(`/tasks/logs/${logId}`, { method: 'DELETE' }),
+  clearExecutionLogs: (status?: string, taskId?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (taskId) params.append('taskId', taskId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<{ success: boolean; count: number; message: string }>(`/tasks/logs${qs}`, { method: 'DELETE' });
+  },
 
   // Credentials
   getCredentials: () => request<any[]>('/credentials'),

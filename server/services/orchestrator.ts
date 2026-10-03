@@ -7,6 +7,7 @@ import { DeployOrchestrator } from './deployers/index.js';
 import { TaskLogger } from './logger.js';
 import { NotificationService } from './notify.js';
 import { encrypt } from './crypto.js';
+import { sanitizeDomain } from './domain-sanitizer.js';
 
 export class TaskOrchestrator {
   private static runningCount = 0;
@@ -88,6 +89,14 @@ export class TaskOrchestrator {
       db.upsertTask(task);
       db.updateExecutionLog(executionLog);
     };
+
+    // Auto-clean domain array in case historical task had protocol, port or trailing slashes
+    const rawDomains = Array.isArray(task.domains) ? task.domains : [];
+    const cleanDomains = rawDomains.map(d => sanitizeDomain(d)).filter(Boolean);
+    if (cleanDomains.length > 0 && JSON.stringify(cleanDomains) !== JSON.stringify(task.domains)) {
+      task.domains = cleanDomains;
+      db.upsertTask(task);
+    }
 
     logger.info(`=======================================================`);
     logger.info(`🚀 启动证书自动化任务 [${task.name}] (触发方式: ${triggerType})`, 'INIT');

@@ -10,6 +10,7 @@ import dns from 'dns';
 import { db } from '../../db/database.js';
 import { TaskLogger } from '../logger.js';
 import { HttpChallengeStore } from './http-challenge.js';
+import { sanitizeDomain } from '../domain-sanitizer.js';
 
 function resolveAcmeEmail(providedEmail?: string, domainFallback?: string): string {
   if (providedEmail && providedEmail.includes('@') && providedEmail.includes('.') && !providedEmail.endsWith('.local')) {
@@ -170,10 +171,12 @@ export class AcmeService {
    * Request & Issue SSL Certificate for given domains
    */
   public static async issueCertificate(options: IssueCertOptions): Promise<IssuedCertificateResult> {
-    const { domains, acmeAccount, dnsCredential, keyType, logger } = options;
+    const { acmeAccount, dnsCredential, keyType, logger } = options;
+    const rawDomains = options.domains || [];
+    const domains = rawDomains.map(d => sanitizeDomain(d)).filter(Boolean);
 
     if (!domains || domains.length === 0) {
-      throw new Error('未指定任何域名');
+      throw new Error('未指定任何有效域名');
     }
 
     const validationType = options.validationType || 'dns-01';

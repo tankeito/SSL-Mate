@@ -38,7 +38,7 @@ export class DomainMonitorService {
         timeout: 8000
       }, () => {
         const cert = socket.getPeerCertificate();
-        socket.end();
+        socket.destroy();
 
         if (!cert || Object.keys(cert).length === 0) {
           return resolve({
