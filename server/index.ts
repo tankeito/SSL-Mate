@@ -1,8 +1,14 @@
+import dns from 'dns';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { config } from './config.js';
+
+// Prioritize IPv4 to avoid hanging on unroutable IPv6 routes in cloud environments
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {}
 import { logBroadcaster } from './services/logger.js';
 import { SchedulerService } from './services/scheduler.js';
 
