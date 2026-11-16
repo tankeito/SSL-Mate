@@ -65,6 +65,7 @@ export type DeployTargetType =
   | 'tencent_cdn'
   | 'cloudflare'
   | 'bt_panel'
+  | 'bt_docker'
   | 'one_panel'
   | 'safeline'
   | 'k8s_secret'

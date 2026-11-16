@@ -20,7 +20,8 @@ import {
   Bell,
   Clock,
   Radio,
-  CheckCircle2
+  CheckCircle2,
+  Box
 } from 'lucide-react';
 import { CertTask, AcmeAccount, Credential, DeployTarget, DeployTargetType, NotifyChannel } from '../../types';
 import { api } from '../../api/client';
@@ -131,6 +132,7 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
       name: type === 'local_file' ? '本地文件目录' :
             type === 'ssh' ? '远程 SSH 主机' :
             type === 'bt_panel' ? '宝塔面板站点' :
+            type === 'bt_docker' ? '宝塔 Docker 网站' :
             type === 'one_panel' ? '1Panel 网站' :
             type === 'aliyun_cdn' ? '阿里云 CDN / 全站加速(DCDN)' :
             type === 'cloudflare' ? 'Cloudflare Custom SSL' :
@@ -490,6 +492,14 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   </button>
                   <button
                     type="button"
+                    onClick={() => addDeployTarget('bt_docker')}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 text-xs font-bold text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 transition-all active:scale-95 shadow-sm"
+                  >
+                    <Box className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span>+ 宝塔 Docker</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => addDeployTarget('one_panel')}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 text-xs font-bold text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/60 transition-all active:scale-95 shadow-sm"
                   >
@@ -556,8 +566,13 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                   <div key={target.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 uppercase">
-                          {target.type}
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-lg uppercase ${
+                          target.type === 'bt_docker' ? 'bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300' :
+                          target.type === 'bt_panel' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300' :
+                          target.type === 'one_panel' ? 'bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300' :
+                          'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}>
+                          {target.type === 'bt_docker' ? '宝塔 Docker' : target.type === 'bt_panel' ? '宝塔面板' : target.type === 'one_panel' ? '1Panel' : target.type}
                         </span>
                         <input
                           type="text"
@@ -605,6 +620,40 @@ export const TaskWizardModal: React.FC<TaskWizardModalProps> = ({
                           />
                           <p className="text-[10px] text-slate-400 mt-0.5">
                             泛域名证书可填写多个站点，自动批量绑定并执行 Nginx 平滑热重载
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Baota Docker Site Config Form */}
+                    {target.type === 'bt_docker' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">选择宝塔面板凭据</label>
+                          <select
+                            value={target.credentialId || ''}
+                            onChange={e => updateDeployTarget(target.id, { credentialId: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                          >
+                            <option value="">-- 选择宝塔面板凭据 --</option>
+                            {credentials.filter(c => c.type === 'bt_panel').map(c => (
+                              <option key={c.id} value={c.id}>{c.name} ({c.config?.apiUrl || c.config?.url})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 mb-1 font-bold">
+                            宝塔 Docker 网站域名 (多站逗号隔开)
+                          </label>
+                          <input
+                            type="text"
+                            value={target.config.siteName || ''}
+                            onChange={e => updateDeployTargetConfig(target.id, { siteName: e.target.value })}
+                            placeholder="如: tool.btc354.com, doc.btc354.com"
+                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            部署至宝塔【Docker】➔【网站/项目】，自动更新容器反代证书并热重载 Nginx
                           </p>
                         </div>
                       </div>

@@ -240,6 +240,11 @@ router.get('/:id/sites', async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (cred.type === 'bt_panel') {
       const { requestBtApi } = await import('../services/deployers/panel.js');
+      if (req.query.type === 'docker') {
+        const dockerData = await requestBtApi(config.apiUrl || config.url, config.apiKey, '/mod/docker/com/get_site_list/json', { p: '1', limit: '100' }, Boolean(config.ignoreSsl));
+        const sites = Array.isArray(dockerData?.data) ? dockerData.data.map((s: any) => s.name) : [];
+        return res.json({ sites });
+      }
       const data = await requestBtApi(config.apiUrl || config.url, config.apiKey, '/data?action=getData&table=sites', {}, Boolean(config.ignoreSsl));
       const sites = Array.isArray(data?.data) ? data.data.map((s: any) => s.name) : [];
       return res.json({ sites });

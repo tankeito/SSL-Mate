@@ -58,6 +58,10 @@ export class DeployOrchestrator {
             await PanelDeployer.deployBaota(target, credential, certData, logger);
             break;
 
+          case 'bt_docker':
+            await PanelDeployer.deployBaotaDocker(target, credential, certData, logger);
+            break;
+
           case 'one_panel':
             await PanelDeployer.deploy1Panel(target, credential, certData, logger);
             break;

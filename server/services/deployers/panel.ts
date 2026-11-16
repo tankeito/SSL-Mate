@@ -88,6 +88,14 @@ export async function requestBtApi(
   let json: any;
   try {
     json = JSON.parse(responseText);
+    // Unpack array response from Baota @app.route('/mod/...') which returns [ jsonStr, headers ]
+    if (Array.isArray(json) && typeof json[0] === 'string') {
+      try {
+        json = JSON.parse(json[0]);
+      } catch {
+        // Keep as-is
+      }
+    }
   } catch (e) {
     if (responseText.includes('IP') || responseText.includes('whitelist') || responseText.includes('白名单') || responseText.includes('校验失败')) {
       throw new Error(`宝塔 API 访问被拦截：调用方 IP 未在宝塔 API 白名单内。请前往宝塔面板【面板设置】➔【API 接口】，将 SSL-Mate 运行服务器 IP 添加到白名单。`);
@@ -194,6 +202,67 @@ export class PanelDeployer {
     }
 
     logger.success(`[宝塔部署] 🎉 全部 ${siteNames.length} 个宝塔站点 SSL 证书自动部署成功！`, 'DEPLOY_BT');
+  }
+
+  /**
+   * Baota Docker Site SSL Deployer
+   */
+  public static async deployBaotaDocker(
+    target: DeployTarget,
+    credential: Credential | undefined,
+    certData: { fullchainPem: string; privkeyPem: string },
+    logger: TaskLogger
+  ) {
+    if (!credential) throw new Error('未配置宝塔面板 API 凭据');
+    const config = decryptObject<any>(credential.config as any);
+    const apiUrl = config.apiUrl || config.url;
+    const apiKey = config.apiKey;
+    const ignoreSsl = Boolean(config.ignoreSsl);
+
+    if (!apiUrl || !apiKey) {
+      throw new Error('宝塔面板凭据缺少 面板地址 (apiUrl) 或 接口密钥 (apiKey)');
+    }
+
+    const rawSiteNames = target.config.siteName || target.config.domain;
+    if (!rawSiteNames) {
+      throw new Error('未配置需要部署的宝塔 Docker 网站域名');
+    }
+
+    const siteNames = rawSiteNames.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+
+    logger.info(`[宝塔Docker] 开始部署 SSL 证书至宝塔 Docker 项目 (${apiUrl})...`, 'DEPLOY_BT');
+    logger.info(`[宝塔Docker] 目标 Docker 站点 (${siteNames.length} 个): ${siteNames.join(', ')}`, 'DEPLOY_BT');
+
+    // 1. Optionally sync certificate to Baota Certificate Vault (/ssl/cert/save_cert)
+    try {
+      logger.info('[宝塔Docker] 正在同步证书至宝塔证书夹...', 'DEPLOY_BT');
+      await requestBtApi(apiUrl, apiKey, '/ssl/cert/save_cert', {
+        key: certData.privkeyPem,
+        csr: certData.fullchainPem
+      }, ignoreSsl);
+      logger.info('[宝塔Docker] 证书已成功同步至宝塔证书夹', 'DEPLOY_BT');
+    } catch (vaultErr: any) {
+      logger.warn(`[宝塔Docker] 证书夹同步提示: ${vaultErr.message}，将直接配置 Docker 站点证书`, 'DEPLOY_BT');
+    }
+
+    // 2. Deploy to each Docker site via /mod/docker/com/set_ssl/json
+    for (const siteName of siteNames) {
+      logger.info(`[宝塔Docker] 正在为 Docker 站点 [${siteName}] 绑定 SSL 证书并开启 HTTPS...`, 'DEPLOY_BT');
+      const deployRes = await requestBtApi(apiUrl, apiKey, '/mod/docker/com/set_ssl/json', {
+        siteName: siteName,
+        site_name: siteName,
+        key: certData.privkeyPem,
+        csr: certData.fullchainPem
+      }, ignoreSsl);
+
+      if (deployRes && deployRes.status === false) {
+        throw new Error(deployRes.msg || '部署到宝塔 Docker 站点失败');
+      }
+
+      logger.success(`[宝塔Docker] ✅ Docker 站点 [${siteName}] SSL 证书部署并热重载成功！`, 'DEPLOY_BT');
+    }
+
+    logger.success(`[宝塔Docker] 🎉 全部 ${siteNames.length} 个宝塔 Docker 站点 SSL 证书自动部署成功！`, 'DEPLOY_BT');
   }
 
   /**
