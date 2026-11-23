@@ -4,36 +4,23 @@ import {
   Sparkles,
   Lock,
   Globe,
-  Server,
   Cloud,
   Activity,
   Bell,
-  Layers,
   CheckCircle2,
   ArrowRight,
   KeyRound,
-  RefreshCw,
-  Terminal,
   Box,
-  Cpu,
   FileSearch,
   AlertTriangle,
   ChevronDown,
-  Sun,
-  Moon,
   ShieldAlert,
-  Zap,
   X,
   Key
 } from 'lucide-react';
 import { api } from '../../api/client';
 
-interface LandingViewProps {
-  darkMode: boolean;
-  setDarkMode: (val: boolean) => void;
-}
-
-export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode }) => {
+export const LandingView: React.FC = () => {
   const [activePreviewTab, setActivePreviewTab] = useState<'pipeline' | 'probe' | 'ct'>('pipeline');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
@@ -182,7 +169,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
     },
     {
       q: '为什么直接访问 /login 登录页面会被拦截？如何进入云签盾管理后台？',
-      a: '为了防止互联网自动化爬虫与暴力破解工具针对管理后台发起撞库攻击，云签盾内置了「安全登录入口令牌（Login Security Token）」防护机制。直接访问裸 `/login` 路径会被系统安全网关以 403 状态直接拦截；管理员需携带配置文件（`.env` 中的 `LOGIN_TOKEN`）设定的安全令牌访问，或点击本页右上角「控制台入口」验证安全令牌后进入登录页。'
+      a: '为了防止互联网自动化爬虫与暴力破解工具针对管理后台发起撞库攻击，云签盾内置了「安全登录入口令牌（Login Security Token）」防护机制。直接访问裸 `/login` 路径会被系统安全网关以 403 状态直接拦截；管理员需携带配置文件（`.env` 中的 `LOGIN_TOKEN`）设定的安全令牌访问，或点击本页右上角「控制台安全入口」验证安全令牌后进入登录页。'
     },
     {
       q: '存储在云签盾中的阿里云/腾讯云 AccessKey 和证书私钥安全吗？',
@@ -191,104 +178,101 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-500/20 selection:text-emerald-700 dark:selection:text-emerald-300 transition-colors">
-      {/* Top Sticky Official Navigation */}
-      <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-700">
+      {/* Fixed Top Official Header (Always pinned to top on both Mobile & PC) */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/90 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Logo & Name */}
-          <a href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-500/25 text-white group-hover:scale-105 transition-transform">
-              <ShieldCheck className="w-6 h-6" />
+          <a href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 flex items-center justify-center shadow-md shadow-emerald-500/25 text-white group-hover:scale-105 transition-transform">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                <span className="text-base sm:text-xl font-black tracking-tight text-slate-900">
                   云签盾
                 </span>
-                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   v1.2.0 Enterprise
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              <p className="text-[11px] text-slate-500 hidden sm:block">
                 全自动 SSL/TLS 证书生命周期管理与多云部署平台
               </p>
             </div>
           </a>
 
-          {/* Navigation Anchor Links */}
-          <nav aria-label="主导航" className="hidden lg:flex items-center gap-7 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
-            <a href="#pain-points" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">核心解决痛点</a>
-            <a href="#features" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">功能矩阵</a>
-            <a href="#workflow" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">3步自动化架构</a>
-            <a href="#ecosystem" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">多云部署生态</a>
-            <a href="#faq" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">常见问题</a>
+          {/* Navigation Anchor Links (PC) */}
+          <nav aria-label="主导航" className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
+            <a href="#pain-points" className="hover:text-emerald-600 transition-colors">核心解决痛点</a>
+            <a href="#features" className="hover:text-emerald-600 transition-colors">功能矩阵</a>
+            <a href="#workflow" className="hover:text-emerald-600 transition-colors">3步自动化架构</a>
+            <a href="#ecosystem" className="hover:text-emerald-600 transition-colors">多云部署生态</a>
+            <a href="#faq" className="hover:text-emerald-600 transition-colors">常见问题</a>
           </nav>
 
-          {/* Right Actions: Theme Switch & Security Console Entrance */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/70 dark:border-slate-700/70 transition-all active:scale-95"
-              title={darkMode ? '切换明亮模式' : '切换深色模式'}
-              aria-label="切换主题模式"
-            >
-              {darkMode ? (
-                <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20" />
-              ) : (
-                <Moon className="w-4 h-4 text-indigo-600 fill-indigo-600/20" />
-              )}
-            </button>
-
+          {/* Right Action: Security Console Entrance */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleOpenConsole}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
             >
-              <KeyRound className="w-4 h-4" />
+              <KeyRound className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>控制台安全入口</span>
             </button>
           </div>
         </div>
+
+        {/* Mobile Quick Anchor Sub-nav (Visible on Mobile/Tablet so fixed header works seamlessly) */}
+        <nav aria-label="移动端快捷导航" className="lg:hidden border-t border-slate-100 bg-slate-50/90 px-4 py-2 flex items-center justify-around text-xs font-semibold text-slate-600 overflow-x-auto whitespace-nowrap">
+          <a href="#pain-points" className="px-2 py-0.5 hover:text-emerald-600">解决痛点</a>
+          <a href="#features" className="px-2 py-0.5 hover:text-emerald-600">功能矩阵</a>
+          <a href="#workflow" className="px-2 py-0.5 hover:text-emerald-600">3步架构</a>
+          <a href="#ecosystem" className="px-2 py-0.5 hover:text-emerald-600">部署生态</a>
+          <a href="#faq" className="px-2 py-0.5 hover:text-emerald-600">常见问题</a>
+        </nav>
       </header>
 
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-slate-200/70 dark:border-slate-800/80">
-          {/* Background Ambient Glows */}
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-tr from-emerald-500/15 via-teal-500/10 to-cyan-500/15 dark:from-emerald-500/10 dark:via-teal-500/10 dark:to-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      {/* Main Content with Top Padding for Fixed Header */}
+      <main className="flex-1 pt-24 lg:pt-16">
+        {/* Hero Section (Pure Light Theme) */}
+        <section className="relative overflow-hidden pt-10 pb-16 sm:pt-16 sm:pb-24 bg-gradient-to-b from-emerald-50/60 via-white to-slate-50 border-b border-slate-200/80">
+          {/* Light Ambient Soft Gradients */}
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] h-[420px] bg-gradient-to-tr from-emerald-200/40 via-teal-100/40 to-cyan-100/40 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
               {/* Left Column: Value Proposition & SEO Copy */}
               <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold shadow-2xs">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                   <span>RFC 8555 (ACME) 标准引擎 · 告别 90 天证书过期焦虑</span>
                 </div>
 
-                <h1 className="text-3xl sm:text-5xl lg:text-[52px] font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+                <h1 className="text-3xl sm:text-5xl lg:text-[50px] font-black tracking-tight text-slate-900 leading-[1.18]">
                   云签盾 — 企业级全自动
-                  <span className="block mt-1.5 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-300 dark:to-cyan-400 bg-clip-text text-transparent">
+                  <span className="block mt-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
                     SSL 证书生命周期管理平台
                   </span>
                 </h1>
 
-                <p className="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                  集中管控跨云、跨面板与容器集群的 HTTPS 数字证书。全自动完成 <strong>DNS-01 权威验证</strong>、<strong>多 CA 机构免费申请签发</strong>、<strong>到期前 30 天无感续期</strong>，一键推送并热重载部署至<strong>宝塔面板、宝塔 Docker、1Panel、阿里云 CDN/DCDN、Kubernetes 及远程 SSH 服务器</strong>。
+                <p className="text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                  集中管控跨云、跨面板与容器集群的 HTTPS 数字证书。全自动完成 <strong className="text-slate-900">DNS-01 权威验证</strong>、<strong className="text-slate-900">多 CA 机构免费申请签发</strong>、<strong className="text-slate-900">到期前 30 天无感续期</strong>，一键推送并热重载部署至<strong className="text-slate-900">宝塔面板、宝塔 Docker、1Panel、阿里云 CDN/DCDN、Kubernetes 及远程 SSH 服务器</strong>。
                 </p>
 
                 {/* Key Highlights Pills */}
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 pt-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 支持泛域名 *.domain.com
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 pt-1 text-xs font-semibold text-slate-700">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 支持泛域名 *.domain.com
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 全球 DoH 权威传播预检
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 全球 DoH 权威传播预检
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 7×24h 全网 TLS 域名探针
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 7×24h 全网 TLS 域名探针
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> CT 证书透明度防伪审计
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> CT 证书透明度防伪审计
                   </span>
                 </div>
 
@@ -296,7 +280,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-3">
                   <button
                     onClick={handleOpenConsole}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-xl shadow-emerald-600/25 transition-all active:scale-95"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
                   >
                     <ShieldCheck className="w-5 h-5" />
                     <span>进入云签盾控制台</span>
@@ -304,34 +288,34 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                   </button>
                   <a
                     href="#features"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-sm border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-sm border border-slate-200 shadow-xs transition-all"
                   >
                     <span>探索核心功能与架构</span>
                   </a>
                 </div>
               </div>
 
-              {/* Right Column: Interactive Live Pipeline & Probe Simulator Card */}
+              {/* Right Column: Interactive Live Pipeline & Probe Simulator Card (Light Theme) */}
               <div className="lg:col-span-5">
-                <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xl shadow-slate-900/10 dark:shadow-black/40 overflow-hidden">
+                <div className="rounded-3xl bg-white border border-slate-200/90 shadow-xl shadow-slate-200/70 overflow-hidden">
                   {/* Window Top Bar */}
-                  <div className="px-4 py-3 bg-slate-100/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="w-3 h-3 rounded-full bg-rose-400"></span>
                       <span className="w-3 h-3 rounded-full bg-amber-400"></span>
                       <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
-                      <span className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <span className="ml-2 text-xs font-bold text-slate-700">
                         云签盾自动化引擎实时演示
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-900/70 p-1 rounded-xl text-[11px] font-bold">
+                    <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-[11px] font-bold">
                       <button
                         type="button"
                         onClick={() => setActivePreviewTab('pipeline')}
                         className={`px-2.5 py-1 rounded-lg transition-colors ${
                           activePreviewTab === 'pipeline'
                             ? 'bg-emerald-600 text-white shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
                         自动签发流
@@ -342,7 +326,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                         className={`px-2.5 py-1 rounded-lg transition-colors ${
                           activePreviewTab === 'probe'
                             ? 'bg-emerald-600 text-white shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
                         TLS 探针
@@ -353,7 +337,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                         className={`px-2.5 py-1 rounded-lg transition-colors ${
                           activePreviewTab === 'ct'
                             ? 'bg-emerald-600 text-white shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
                         CT 审计
@@ -361,48 +345,48 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                     </div>
                   </div>
 
-                  {/* Interactive Tab Body */}
-                  <div className="p-5">
+                  {/* Interactive Tab Body (Clean Light Surface) */}
+                  <div className="p-5 bg-white">
                     {activePreviewTab === 'pipeline' && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                            <div className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                               <span>全自动签发与多端热重载任务</span>
                             </div>
-                            <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5 font-mono">
+                            <div className="text-sm font-black text-slate-900 mt-0.5 font-mono">
                               *.btc354.com (EC256 · DNS-01)
                             </div>
                           </div>
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             耗时 26.0s · 成功
                           </span>
                         </div>
 
-                        <div className="rounded-2xl bg-slate-950 text-slate-200 p-4 font-mono text-[11px] space-y-2 leading-relaxed border border-slate-800">
-                          <div className="text-emerald-400">[ACME] 账户就绪 (Let&apos;s Encrypt Production)</div>
-                          <div className="text-slate-300">[CSR] 生成 EC256 私钥与证书签名请求成功</div>
-                          <div className="text-cyan-400">[DNS-01] 自动写入阿里云 DNS TXT 记录: _acme-challenge</div>
-                          <div className="text-emerald-400">[PREFLIGHT] ✅ 全球权威 DoH 多源预检通过！</div>
-                          <div className="text-emerald-300 font-bold">[ISSUING] 🎉 CA 校验通过，SSL 证书已签发并加密归档！</div>
-                          <div className="text-teal-300">[DEPLOY] ➔ [宝塔面板站点] 证书同步与 Nginx 热重载成功</div>
-                          <div className="text-teal-300">[DEPLOY] ➔ [宝塔 Docker 网站] 容器反代证书绑定与热重载成功</div>
-                          <div className="text-teal-300">[DEPLOY] ➔ [阿里云 DCDN] 边缘节点 HTTPS 证书更新完毕</div>
+                        <div className="rounded-2xl bg-slate-50 text-slate-700 p-4 font-mono text-[11px] space-y-2 leading-relaxed border border-slate-200/90">
+                          <div className="text-emerald-700 font-semibold">[ACME] 账户就绪 (Let&apos;s Encrypt Production)</div>
+                          <div className="text-slate-600">[CSR] 生成 EC256 私钥与证书签名请求成功</div>
+                          <div className="text-teal-700 font-semibold">[DNS-01] 自动写入阿里云 DNS TXT 记录: _acme-challenge</div>
+                          <div className="text-emerald-700 font-semibold">[PREFLIGHT] ✅ 全球权威 DoH 多源预检通过！</div>
+                          <div className="text-emerald-800 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md">[ISSUING] 🎉 CA 校验通过，SSL 证书已签发并加密归档！</div>
+                          <div className="text-teal-700">[DEPLOY] ➔ [宝塔面板站点] 证书同步与 Nginx 热重载成功</div>
+                          <div className="text-teal-700">[DEPLOY] ➔ [宝塔 Docker 网站] 容器反代证书绑定与热重载成功</div>
+                          <div className="text-teal-700">[DEPLOY] ➔ [阿里云 DCDN] 边缘节点 HTTPS 证书更新完毕</div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-2.5 text-center">
-                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800">
-                            <div className="text-[10px] text-slate-400">签发机构</div>
-                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">Let&apos;s Encrypt</div>
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                            <div className="text-[10px] text-slate-500">签发机构</div>
+                            <div className="text-xs font-bold text-slate-800 mt-0.5">Let&apos;s Encrypt</div>
                           </div>
-                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800">
-                            <div className="text-[10px] text-slate-400">自动续期策略</div>
-                            <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">到期前 30 天</div>
+                          <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
+                            <div className="text-[10px] text-emerald-700">自动续期策略</div>
+                            <div className="text-xs font-bold text-emerald-700 mt-0.5">到期前 30 天</div>
                           </div>
-                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800">
-                            <div className="text-[10px] text-slate-400">私钥存储加密</div>
-                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">AES-256-GCM</div>
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                            <div className="text-[10px] text-slate-500">私钥存储加密</div>
+                            <div className="text-xs font-bold text-slate-800 mt-0.5">AES-256-GCM</div>
                           </div>
                         </div>
                       </div>
@@ -411,10 +395,10 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                     {activePreviewTab === 'probe' && (
                       <div className="space-y-3.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          <span className="text-xs font-bold text-slate-700">
                             全网公网域名 TLS 探针实时监控
                           </span>
-                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          <span className="text-[11px] text-emerald-600 font-bold">
                             7×24h 自动巡检中
                           </span>
                         </div>
@@ -423,17 +407,17 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                           { domain: 'tool.btc354.com:443', issuer: "Let's Encrypt (YR1)", days: 89, tls: 'TLSv1.3', latency: '28ms' },
                           { domain: 'sso.btc354.com:443', issuer: "Let's Encrypt (E5)", days: 71, tls: 'TLSv1.3', latency: '35ms' }
                         ].map((item) => (
-                          <div key={item.domain} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                          <div key={item.domain} className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                             <div>
-                              <div className="text-xs font-bold font-mono text-slate-900 dark:text-white flex items-center gap-1.5">
+                              <div className="text-xs font-bold font-mono text-slate-900 flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                 {item.domain}
                               </div>
-                              <div className="text-[11px] text-slate-400 mt-0.5">
+                              <div className="text-[11px] text-slate-500 mt-0.5">
                                 {item.issuer} · {item.tls} · 握手 {item.latency}
                               </div>
                             </div>
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
+                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               剩余 {item.days} 天
                             </span>
                           </div>
@@ -443,31 +427,31 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
 
                     {activePreviewTab === 'ct' && (
                       <div className="space-y-3.5">
-                        <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60">
-                          <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                          <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
                             <ShieldCheck className="w-4 h-4 text-emerald-600" />
                             <span>CT (Certificate Transparency) 证书透明度防伪核验</span>
                           </div>
-                          <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 leading-relaxed">
+                          <p className="text-[11px] text-emerald-700 mt-1 leading-relaxed">
                             实时同步全球公共 CT 日志，自动比对每一次证书签发记录与云签盾本地资产库序列号，精准识别非授权签发。
                           </p>
                         </div>
                         <div className="space-y-2 text-xs">
-                          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                             <div>
-                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">tool.btc354.com</div>
-                              <div className="text-[10px] text-slate-400 font-mono">SN: 05e212246f5e6e36...</div>
+                              <div className="font-mono font-bold text-slate-800">tool.btc354.com</div>
+                              <div className="text-[10px] text-slate-500 font-mono">SN: 05e212246f5e6e36...</div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               ✓ 云签盾受管签发
                             </span>
                           </div>
-                          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                             <div>
-                              <div className="font-mono font-bold text-slate-800 dark:text-slate-200">*.btc354.com</div>
-                              <div className="text-[10px] text-slate-400 font-mono">SN: 04d190a8c2119b4a...</div>
+                              <div className="font-mono font-bold text-slate-800">*.btc354.com</div>
+                              <div className="text-[10px] text-slate-500 font-mono">SN: 04d190a8c2119b4a...</div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               ✓ 云签盾受管签发
                             </span>
                           </div>
@@ -480,42 +464,42 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
             </div>
 
             {/* Key Metrics Strip */}
-            <div className="mt-14 pt-10 border-t border-slate-200/70 dark:border-slate-800/70 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">100%</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mt-1">全自动无感续签</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">到期前 30 天自动触发</div>
+            <div className="mt-14 pt-10 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              <div className="p-4 rounded-2xl bg-white border border-slate-200/70 shadow-2xs">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600">100%</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">全自动无感续签</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">到期前 30 天自动触发</div>
               </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">&lt; 30秒</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mt-1">极速签发与多端下发</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">声明式 3 步向导配置</div>
+              <div className="p-4 rounded-2xl bg-white border border-slate-200/70 shadow-2xs">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600">&lt; 30秒</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">极速签发与多端下发</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">声明式 3 步向导配置</div>
               </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">10+ 生态</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mt-1">跨云跨面板部署目标</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">宝塔 / Docker / 1Panel / CDN / K8s</div>
+              <div className="p-4 rounded-2xl bg-white border border-slate-200/70 shadow-2xs">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600">10+ 生态</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">跨云跨面板部署目标</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">宝塔 / Docker / 1Panel / CDN / K8s</div>
               </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">AES-256</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mt-1">硬件级 GCM 密文存储</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">安全入口 Token 防爆破保护</div>
+              <div className="p-4 rounded-2xl bg-white border border-slate-200/70 shadow-2xs">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600">AES-256</div>
+                <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">硬件级 GCM 密文存储</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">安全入口 Token 防爆破保护</div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Section 2: Pain Points vs CloudSignShield Solutions */}
-        <section id="pain-points" className="py-16 sm:py-24 bg-white dark:bg-slate-900/50 border-b border-slate-200/70 dark:border-slate-800/80">
+        {/* Section 2: Pain Points vs Solutions */}
+        <section id="pain-points" className="scroll-mt-24 py-16 sm:py-24 bg-white border-b border-slate-200/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                 为什么选择云签盾
               </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
                 直击 HTTPS 证书运维四大核心痛点
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+              <p className="text-sm sm:text-base text-slate-600">
                 告别传统人工记忆、繁琐脚本与跨平台手工复制粘贴，构建高可用、零失误的企业级证书自动化基础设施。
               </p>
             </div>
@@ -524,26 +508,26 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
               {painPoints.map((item, idx) => (
                 <article
                   key={idx}
-                  className="rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-xs hover:shadow-md transition-shadow"
+                  className="rounded-3xl bg-slate-50/70 border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-xs hover:shadow-md transition-shadow"
                 >
                   {/* Pain Point */}
-                  <div className="p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 space-y-1.5">
-                    <div className="flex items-center gap-2 text-xs font-bold text-rose-600 dark:text-rose-400">
-                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <div className="p-4 rounded-2xl bg-rose-50/90 border border-rose-200/80 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-rose-700">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
                       <span>传统运维痛点 #{idx + 1}：{item.painTitle}</span>
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-600 leading-relaxed">
                       {item.painDesc}
                     </p>
                   </div>
 
                   {/* Solution */}
-                  <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 space-y-1.5">
-                    <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>云签盾解决方案：{item.solutionTitle}</span>
                     </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <p className="text-xs text-slate-700 leading-relaxed">
                       {item.solutionDesc}
                     </p>
                   </div>
@@ -554,16 +538,16 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
         </section>
 
         {/* Section 3: Core Feature Matrix */}
-        <section id="features" className="py-16 sm:py-24 border-b border-slate-200/70 dark:border-slate-800/80">
+        <section id="features" className="scroll-mt-24 py-16 sm:py-24 bg-slate-50 border-b border-slate-200/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                 全栈能力矩阵
               </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
                 集签发、部署、监控、审计于一体的安全中枢
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+              <p className="text-sm sm:text-base text-slate-600">
                 从 ACME 底层协议交互到多云生产环境平滑热重载，每一处细节均按企业级高可靠标准打造。
               </p>
             </div>
@@ -574,21 +558,21 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                 return (
                   <article
                     key={idx}
-                    className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 flex flex-col justify-between hover:border-emerald-500/50 dark:hover:border-emerald-500/50 transition-all group shadow-2xs hover:shadow-lg"
+                    className="rounded-3xl bg-white border border-slate-200/90 p-6 flex flex-col justify-between hover:border-emerald-500/60 transition-all group shadow-2xs hover:shadow-lg"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                           <Icon className="w-5 h-5" />
                         </div>
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                           {feat.badge}
                         </span>
                       </div>
-                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">
+                      <h3 className="text-base font-extrabold text-slate-900 mb-2">
                         {feat.title}
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      <p className="text-xs text-slate-600 leading-relaxed">
                         {feat.desc}
                       </p>
                     </div>
@@ -600,53 +584,53 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
         </section>
 
         {/* Section 4: 3-Step Declarative Workflow Architecture */}
-        <section id="workflow" className="py-16 sm:py-24 bg-white dark:bg-slate-900/50 border-b border-slate-200/70 dark:border-slate-800/80">
+        <section id="workflow" className="scroll-mt-24 py-16 sm:py-24 bg-white border-b border-slate-200/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
                 极简工程哲学
               </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
                 声明式 3 步向导，30 秒打通全自动证书流水线
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+              <p className="text-sm sm:text-base text-slate-600">
                 摒弃反人类的复杂节点连线图，将证书全生命周期浓缩为直观的 3 步声明式配置。
               </p>
             </div>
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-7 relative">
+              <div className="rounded-3xl bg-slate-50 border border-slate-200/90 p-7 relative shadow-2xs">
                 <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-emerald-600/20 mb-4">
                   01
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                <h3 className="text-lg font-extrabold text-slate-900 mb-2">
                   定义域名与 CA 签发策略
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   输入主域名与备用 SAN 域名（支持 `*.domain.com` 通配符泛域名），选择 Let&apos;s Encrypt 或 ZeroSSL 等 CA 账户，按需指定 EC256 或 RSA2048 密钥算法。
                 </p>
               </div>
 
-              <div className="rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-7 relative">
+              <div className="rounded-3xl bg-slate-50 border border-slate-200/90 p-7 relative shadow-2xs">
                 <div className="w-10 h-10 rounded-xl bg-teal-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-teal-600/20 mb-4">
                   02
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                <h3 className="text-lg font-extrabold text-slate-900 mb-2">
                   绑定 DNS-01 自动化验证凭据
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   关联阿里云 DNS、腾讯云 DNSPod 或 Cloudflare API 凭据。系统自动写入 `_acme-challenge` TXT 记录，并通过全球多源权威 DoH 预检确认生效后完成签发与清理。
                 </p>
               </div>
 
-              <div className="rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-7 relative">
+              <div className="rounded-3xl bg-slate-50 border border-slate-200/90 p-7 relative shadow-2xs">
                 <div className="w-10 h-10 rounded-xl bg-cyan-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-cyan-600/20 mb-4">
                   03
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                <h3 className="text-lg font-extrabold text-slate-900 mb-2">
                   编排多端部署目标与智能巡检
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   自由组合一个或多个部署目标（宝塔面板、宝塔 Docker、1Panel、CDN、K8s、SSH 主机），开启到期前 30 天自动续期与多通道告警推送。
                 </p>
               </div>
@@ -655,16 +639,16 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
         </section>
 
         {/* Section 5: Multi-Cloud & Panel Deployment Ecosystem */}
-        <section id="ecosystem" className="py-16 sm:py-24 border-b border-slate-200/70 dark:border-slate-800/80">
+        <section id="ecosystem" className="scroll-mt-24 py-16 sm:py-24 bg-slate-50 border-b border-slate-200/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                 无缝对接主流生态
               </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
                 支持 10+ 种主流运维面板、容器与云厂商一键部署
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+              <p className="text-sm sm:text-base text-slate-600">
                 无论是国内主流的宝塔面板、宝塔 Docker 容器网站、1Panel、阿里云 DCDN，还是 Kubernetes 云原生集群，均可实现零停机证书热更新。
               </p>
             </div>
@@ -673,16 +657,16 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
               {deployTargetsList.map((target, idx) => (
                 <div
                   key={idx}
-                  className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 flex flex-col justify-between hover:border-emerald-500/40 transition-colors"
+                  className="rounded-2xl bg-white border border-slate-200/90 p-5 flex flex-col justify-between hover:border-emerald-500/50 shadow-2xs hover:shadow-md transition-all"
                 >
                   <div>
-                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 mb-2.5">
+                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/70 mb-2.5">
                       {target.tag}
                     </span>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mb-1.5">
+                    <h3 className="text-sm font-extrabold text-slate-900 mb-1.5">
                       {target.name}
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       {target.desc}
                     </p>
                   </div>
@@ -693,13 +677,13 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
         </section>
 
         {/* Section 6: SEO FAQ Section */}
-        <section id="faq" className="py-16 sm:py-24 bg-white dark:bg-slate-900/50">
+        <section id="faq" className="scroll-mt-24 py-16 sm:py-24 bg-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center space-y-3 mb-12">
-              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                 常见问题解答 (FAQ)
               </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
                 关于云签盾 SSL 证书自动化平台
               </h2>
             </div>
@@ -710,18 +694,18 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                 return (
                   <div
                     key={idx}
-                    className="rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden"
+                    className="rounded-2xl bg-slate-50 border border-slate-200/90 overflow-hidden"
                   >
                     <button
                       type="button"
                       onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                      className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                      className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-slate-900 hover:text-emerald-600 transition-colors"
                     >
                       <span>{faq.q}</span>
                       <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-emerald-600' : 'text-slate-400'}`} />
                     </button>
                     {isOpen && (
-                      <div className="px-6 pb-5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-200/50 dark:border-slate-800/60 pt-3">
+                      <div className="px-6 pb-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-200/70 pt-3 bg-white">
                         {faq.a}
                       </div>
                     )}
@@ -733,25 +717,25 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
         </section>
       </main>
 
-      {/* Official SEO Footer */}
-      <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 dark:text-slate-400">
+      {/* Official SEO Footer (Light Theme) */}
+      <footer className="border-t border-slate-200/90 bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
               <ShieldCheck className="w-4.5 h-4.5" />
             </div>
             <div>
-              <div className="font-black text-slate-900 dark:text-white text-sm">
+              <div className="font-black text-slate-900 text-sm">
                 云签盾 · 企业级全自动 SSL/TLS 证书生命周期管理平台
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
+              <div className="text-[11px] text-slate-500 mt-0.5">
                 RFC 8555 (ACME) 标准签发 · 全球 DoH 权威预检 · 跨云跨面板自动化热重载 · 7×24h 全网 HTTPS 探针
               </div>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 text-[11px]">
-            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               守护引擎在线运行
             </span>
@@ -763,34 +747,34 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
         </div>
       </footer>
 
-      {/* Security Entrance Token Prompt Modal */}
+      {/* Security Entrance Token Prompt Modal (Light Theme) */}
       {tokenModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 relative">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 relative">
             <button
               type="button"
               onClick={() => setTokenModalOpen(false)}
-              className="absolute right-5 top-5 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="absolute right-5 top-5 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
                 <Key className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <h3 className="text-base font-black text-slate-900">
                   安全登录入口校验
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500">
                   云签盾已启用防攻击安全入口保护，请输入访问令牌
                 </p>
               </div>
             </div>
 
             {tokenError && (
-              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{tokenError}</span>
               </div>
@@ -798,7 +782,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
 
             <form onSubmit={handleVerifyTokenSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   安全入口令牌 (LOGIN_TOKEN)
                 </label>
                 <input
@@ -808,10 +792,10 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                   placeholder="请输入配置文件中的 LOGIN_TOKEN"
                   autoFocus
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
-                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                  提示：您也可以直接通过书签访问 <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-emerald-600 dark:text-emerald-400">/login?token=您的令牌</code> 进入登录页。
+                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                  提示：您也可以直接通过书签访问 <code className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-emerald-700">/login?token=您的令牌</code> 进入登录页。
                 </p>
               </div>
 
@@ -819,7 +803,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ darkMode, setDarkMode 
                 <button
                   type="button"
                   onClick={() => setTokenModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
                 >
                   取消
                 </button>

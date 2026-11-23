@@ -47,15 +47,15 @@ export const App: React.FC = () => {
   const [terminalTaskId, setTerminalTaskId] = useState('');
   const [terminalTaskName, setTerminalTaskName] = useState('');
 
-  // Handle Dark mode class
+  // Handle Dark mode class (Enforce pure light mode on public landing & login pages)
   useEffect(() => {
     localStorage.setItem('sslmate_dark_mode', darkMode.toString());
-    if (darkMode) {
+    if (darkMode && user) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [darkMode]);
+  }, [darkMode, user]);
 
   const currentPath = window.location.pathname;
 
@@ -68,13 +68,13 @@ export const App: React.FC = () => {
 
   // If unauthenticated and visiting the public homepage (/), render LandingView immediately for SEO & zero-latency LCP
   if (!user && !loading && !isLoginRoute) {
-    return <LandingView darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <LandingView />;
   }
 
   // Handle Auth Session Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
       </div>
     );
@@ -90,7 +90,7 @@ export const App: React.FC = () => {
   }
 
   if (!user) {
-    return <LandingView darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <LandingView />;
   }
 
   const handleOpenNewTask = () => {
