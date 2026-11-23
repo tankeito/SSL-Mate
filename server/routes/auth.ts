@@ -6,8 +6,42 @@ import { buildSSOAuthorizationUrl, exchangeCodeForTokens, fetchUserInfo, provisi
 
 import { verifyTotpToken } from '../services/totp.js';
 import { encrypt, decrypt } from '../services/crypto.js';
+import { verifyLoginEntryToken } from '../config.js';
 
 const router = Router();
+
+/**
+ * Extract login entry token from request headers, query, or body
+ */
+function extractEntryToken(req: Request): string {
+  const headerToken = req.headers['x-login-token'];
+  if (typeof headerToken === 'string' && headerToken.trim()) {
+    return headerToken.trim();
+  }
+  const queryToken = req.query.token || req.query.t;
+  if (typeof queryToken === 'string' && queryToken.trim()) {
+    return queryToken.trim();
+  }
+  const bodyToken = req.body?.loginToken;
+  if (typeof bodyToken === 'string' && bodyToken.trim()) {
+    return bodyToken.trim();
+  }
+  return '';
+}
+
+/**
+ * Verify Login Security Entrance Token (/login guard)
+ */
+router.get('/verify-entry', (req: Request, res: Response) => {
+  const token = extractEntryToken(req);
+  if (!verifyLoginEntryToken(token)) {
+    return res.status(403).json({
+      valid: false,
+      error: '安全登录入口校验失败：当前系统已启用防攻击令牌保护，禁止直接访问 /login'
+    });
+  }
+  return res.json({ valid: true });
+});
 
 // Store PKCE verifiers in memory for state correlation
 const pkceStore = new Map<string, { verifier: string; timestamp: number }>();
@@ -26,6 +60,13 @@ setInterval(() => {
  * Local Admin Login (Break-Glass / 灾备应急登录，支持 TOTP 2FA)
  */
 router.post('/login', (req: Request, res: Response) => {
+  const entryToken = extractEntryToken(req);
+  if (!verifyLoginEntryToken(entryToken)) {
+    return res.status(403).json({
+      error: '安全入口令牌校验失败：非法登录请求已被拦截，请通过合法安全入口地址访问'
+    });
+  }
+
   const { username, password, totpCode } = req.body;
 
   if (!username || !password) {
@@ -92,6 +133,13 @@ router.post('/login', (req: Request, res: Response) => {
  */
 router.get('/sso/url', async (req: Request, res: Response) => {
   try {
+    const entryToken = extractEntryToken(req);
+    if (!verifyLoginEntryToken(entryToken)) {
+      return res.status(403).json({
+        error: '安全入口令牌校验失败：非法 SSO 请求已被拦截，请通过合法安全入口地址访问'
+      });
+    }
+
     const settings = db.getSettings().authmate;
     if (!settings.enabled) {
       return res.status(400).json({ error: 'AuthMate SSO 未启用' });

@@ -10,7 +10,7 @@ const router = Router();
 router.get('/info', (req, res) => {
   const settings = db.getSettings();
   return res.json({
-    name: 'SSL-Mate (证书伴侣)',
+    name: '云签盾',
     version: '1.2.0',
     ssoEnabled: settings.authmate.enabled,
     issuerUrl: settings.authmate.issuerUrl

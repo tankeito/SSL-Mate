@@ -3,7 +3,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import { config } from './config.js';
+import { config, verifyLoginEntryToken, getExpectedLoginToken } from './config.js';
 
 // Prioritize IPv4 to avoid hanging on unroutable IPv6 routes in cloud environments
 try {
@@ -76,6 +76,43 @@ app.get('/events/tasks/:taskId', (req: Request, res: Response) => {
   logBroadcaster.subscribe(taskId, res);
 });
 
+// SEO: robots.txt & sitemap.xml
+app.get('/robots.txt', (req: Request, res: Response) => {
+  const host = req.headers.host || 'ssl.ap1x.xyz';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.send(
+`User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /events/
+Disallow: /login
+Disallow: /oauth/
+
+Sitemap: ${protocol}://${host}/sitemap.xml
+`
+  );
+});
+
+app.get('/sitemap.xml', (req: Request, res: Response) => {
+  const host = req.headers.host || 'ssl.ap1x.xyz';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const baseUrl = `${protocol}://${host}`;
+  const today = new Date().toISOString().split('T')[0];
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.send(
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`
+  );
+});
+
 // Production Static Serving (Robust path detection)
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
@@ -84,10 +121,36 @@ const distDir = fs.existsSync(path.resolve(__dirname, '../dist'))
   ? path.resolve(__dirname, '../dist')
   : path.resolve(process.cwd(), 'dist');
 
+/**
+ * Helper to extract login token from /login or /login/:token request
+ */
+function extractLoginRequestToken(req: Request): string {
+  const pathMatch = req.path.match(/^\/login\/([^/]+)\/?$/);
+  if (pathMatch && pathMatch[1]) {
+    return decodeURIComponent(pathMatch[1]).trim();
+  }
+  const qToken = req.query.token || req.query.t;
+  if (typeof qToken === 'string' && qToken.trim()) {
+    return qToken.trim();
+  }
+  const queryKeys = Object.keys(req.query);
+  if (queryKeys.length === 1 && req.query[queryKeys[0]] === '') {
+    return queryKeys[0].trim();
+  }
+  return '';
+}
+
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
   app.use((req: Request, res: Response, next) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/events')) {
+      // Intercept /login and /login/* when token is missing or invalid
+      if (req.path === '/login' || req.path.startsWith('/login/')) {
+        const candidateToken = extractLoginRequestToken(req);
+        if (!verifyLoginEntryToken(candidateToken)) {
+          res.status(403);
+        }
+      }
       res.sendFile(path.join(distDir, 'index.html'));
     } else {
       next();
@@ -101,8 +164,9 @@ SchedulerService.init();
 const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔒 SSL-Mate (证书伴侣) 后端服务已成功启动                    ║
+║  🛡️ 云签盾 - 全自动 SSL 证书生命周期管理平台已启动             ║
 ║  📡 服务端口: http://127.0.0.1:${config.port}                        ║
+║  🔑 登录安全入口: /login?token=${getExpectedLoginToken().padEnd(27)} ║
 ║  🔐 AuthMate SSO IdP: ${config.authmate.issuerUrl.padEnd(30)} ║
 ║  💾 数据存储: ${config.dbPath.padEnd(38)} ║
 ╚══════════════════════════════════════════════════════════════╝

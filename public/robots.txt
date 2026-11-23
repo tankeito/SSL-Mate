@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /events/
+Disallow: /login
+Disallow: /oauth/
+
+Sitemap: https://ssl.ap1x.xyz/sitemap.xml

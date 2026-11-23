@@ -15,7 +15,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => Boolean(localStorage.getItem('sslmate_token')));
 
   const refreshUser = async () => {
     const token = localStorage.getItem('sslmate_token');
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem('sslmate_token');
     setUser(null);
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   return (

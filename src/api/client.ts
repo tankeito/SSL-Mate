@@ -10,6 +10,7 @@ export class ApiError extends Error {
 
 export async function request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('sslmate_token');
+  const entryToken = sessionStorage.getItem('yqd_login_entry_token');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -20,6 +21,10 @@ export async function request<T = any>(endpoint: string, options: RequestInit = 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  if (entryToken && !headers['X-Login-Token']) {
+    headers['X-Login-Token'] = entryToken;
+  }
+
   const url = `${API_BASE}${endpoint}`;
   const res = await fetch(url, {
     ...options,
@@ -28,8 +33,8 @@ export async function request<T = any>(endpoint: string, options: RequestInit = 
 
   if (res.status === 401) {
     localStorage.removeItem('sslmate_token');
-    if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/oauth/callback')) {
-      window.location.href = '/login';
+    if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/oauth/callback')) {
+      window.location.href = '/';
     }
   }
 
@@ -44,6 +49,10 @@ export async function request<T = any>(endpoint: string, options: RequestInit = 
 
 export const api = {
   // Auth & Users
+  verifyLoginEntry: (entryToken: string) =>
+    request<{ valid: boolean }>(`/auth/verify-entry?token=${encodeURIComponent(entryToken)}`, {
+      headers: { 'X-Login-Token': entryToken }
+    }),
   login: (data: any) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   getSsoUrl: () => request<{ authUrl: string; state: string }>('/auth/sso/url'),
   ssoCallback: (code: string, state: string) => request('/auth/sso/callback', { method: 'POST', body: JSON.stringify({ code, state }) }),

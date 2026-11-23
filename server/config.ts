@@ -33,10 +33,34 @@ function resolveSecret(envKey: string, fileName: string, description: string): s
   return generated;
 }
 
+export function getExpectedLoginToken(): string {
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const parsed = dotenv.parse(fs.readFileSync(envPath, 'utf8'));
+      if (parsed.LOGIN_TOKEN !== undefined && parsed.LOGIN_TOKEN.trim() !== '') {
+        return parsed.LOGIN_TOKEN.trim();
+      }
+    }
+  } catch {}
+  return (process.env.LOGIN_TOKEN || 'yqd_sec_2026').trim();
+}
+
+export function verifyLoginEntryToken(provided?: string | null): boolean {
+  const expected = getExpectedLoginToken();
+  if (!expected) return true;
+  if (!provided || typeof provided !== 'string') return false;
+  const a = Buffer.from(provided.trim(), 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '8989', 10),
   jwtSecret: resolveSecret('JWT_SECRET', '.jwt_secret', 'JWT 签名密钥'),
   masterKey: resolveSecret('MASTER_KEY', '.master_key', '数据加密主密钥'),
+  loginToken: getExpectedLoginToken(),
   dataDir: DATA_DIR,
   dbPath: path.join(DATA_DIR, 'sslmate.json'),
   

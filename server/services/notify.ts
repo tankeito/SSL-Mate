@@ -46,7 +46,7 @@ export class NotificationService {
         ? `❌ SSL 证书续期失败告警`
         : `⚠️ SSL 证书即将到期预警`;
 
-    const content = `【SSL-Mate 证书伴侣】\n任务名称: ${payload.taskName}\n域名列表: ${payload.domains.join(', ')}\n` +
+    const content = `【云签盾 SSL 证书管理平台】\n任务名称: ${payload.taskName}\n域名列表: ${payload.domains.join(', ')}\n` +
       (payload.expiresAt ? `到期时间: ${new Date(payload.expiresAt).toLocaleString()}\n` : '') +
       (payload.daysLeft !== undefined ? `剩余天数: ${payload.daysLeft} 天\n` : '') +
       (payload.errorMessage ? `错误原因: ${payload.errorMessage}\n` : '') +

@@ -4,10 +4,130 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SSL-Mate (证书伴侣) - 自动化 SSL 证书管理平台</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- Primary SEO Meta Tags (Baidu & Google Optimized) -->
+    <title>云签盾 - 企业级全自动 SSL 证书生命周期管理平台 | 免费 HTTPS 证书自动申请续期与多云部署</title>
+    <meta name="title" content="云签盾 - 企业级全自动 SSL 证书生命周期管理平台 | 免费 HTTPS 证书自动申请续期与多云部署" />
+    <meta name="description" content="云签盾（YunQianDun）是新一代企业级全自动 SSL/TLS 证书生命周期管理与多云部署平台。基于 RFC 8555 ACME 协议与 DNS-01 全球权威预检，支持 Let's Encrypt、ZeroSSL、Google Trust Services 等多 CA 机构，一键自动签发并零停机热重载部署至宝塔面板、宝塔 Docker、1Panel、阿里云 CDN/DCDN、腾讯云、Cloudflare、Kubernetes 及 SSH 主机，提供 7x24 小时全网 HTTPS 探针与 CT 证书透明度安全审计，彻底解决证书过期痛点。" />
+    <meta name="keywords" content="云签盾,SSL证书自动续期,免费SSL证书申请,HTTPS证书管理平台,ACME自动化部署,Let's Encrypt自动续签,泛域名SSL证书自动部署,宝塔SSL证书自动续期,宝塔Docker证书部署,1Panel证书自动同步,阿里云CDN证书自动更新,K8s证书自动续期,SSL域名监控探针,CT证书透明度审计" />
+    <meta name="author" content="云签盾团队 (YunQianDun Security)" />
+    <meta name="application-name" content="云签盾" />
+    <meta name="theme-color" content="#059669" />
+
+    <!-- Search Engine Crawler Directives (BaiduSpider, Googlebot, Bingbot) -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="baiduspider" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta name="MobileOptimized" content="width" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://ssl.ap1x.xyz/" />
+
+    <!-- Open Graph / Social Discovery -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="云签盾" />
+    <meta property="og:url" content="https://ssl.ap1x.xyz/" />
+    <meta property="og:title" content="云签盾 - 企业级全自动 SSL 证书生命周期管理与多云部署平台" />
+    <meta property="og:description" content="告别 90 天证书过期焦虑！全自动完成 DNS-01 权威验证、多 CA 签发、跨云跨面板（宝塔 / 宝塔 Docker / 1Panel / 阿里云 CDN / K8s / SSH）一键推送与平滑热重载。" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="云签盾 - 企业级全自动 SSL 证书生命周期管理平台" />
+    <meta name="twitter:description" content="基于 RFC 8555 ACME 协议，提供多 CA 自动签发、全球 DoH 权威预检、多云多面板一键热重载部署与 7x24h HTTPS 证书健康监控。" />
+
+    <!-- JSON-LD Structured Data for Google & Baidu Rich Snippets -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://ssl.ap1x.xyz/#website",
+            "url": "https://ssl.ap1x.xyz/",
+            "name": "云签盾",
+            "alternateName": ["云签盾 SSL 证书自动化平台", "YunQianDun SSL Platform"],
+            "description": "企业级全自动 SSL/TLS 证书生命周期管理与多云部署平台",
+            "inLanguage": "zh-CN"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://ssl.ap1x.xyz/#software",
+            "name": "云签盾",
+            "operatingSystem": "Linux, Windows, macOS, Docker, Kubernetes",
+            "applicationCategory": "SecurityApplication, DeveloperApplication",
+            "url": "https://ssl.ap1x.xyz/",
+            "softwareVersion": "1.2.0",
+            "description": "云签盾致力于解决免费与商用 SSL 证书频繁过期、多云多服务器手工部署繁琐、证书链状态难监控等核心运维痛点，提供声明式 3 步自动化签发、全球 DoH 权威预检、跨平台零停机部署与 7x24 小时全网 TLS 探针监控。",
+            "featureList": [
+              "支持 Let's Encrypt、ZeroSSL、Google Trust Services 等多 CA 机构自动化签发",
+              "支持阿里云 DNS、腾讯云 DNSPod、Cloudflare 等全自动 DNS-01 验证与全球 DoH 权威预检",
+              "支持宝塔面板站点、宝塔 Docker 容器反代、1Panel 面板、阿里云 CDN/DCDN、腾讯云 CDN、Cloudflare、K8s Secret、SSH 主机一键部署与平滑热重载",
+              "7x24h 全网多区域 TLS 域名探针矩阵，实时检测证书到期时间、OCSP 装订与握手延迟",
+              "CT (Certificate Transparency) 证书透明度日志监控，防范未授权或幽灵证书签发",
+              "AES-256-GCM 硬件级凭据加密存储、OIDC + PKCE 单点登录与 TOTP 2FA 双因素认证"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "CNY"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://ssl.ap1x.xyz/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "云签盾是什么？解决了哪些核心问题？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "云签盾是专为开发者与企业运维打造的全自动 SSL/TLS 证书生命周期管理平台。它彻底解决了免费 SSL 证书有效期缩短至 90 天带来的频繁续签负担、跨多台服务器与多云 CDN 手工替换证书易出错、以及线上域名证书遗忘过期导致业务中断等核心痛点。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "云签盾支持哪些部署目标？支持宝塔 Docker 和 1Panel 吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "云签盾原生支持宝塔 Linux 面板传统站点、宝塔 Docker 容器网站/项目、1Panel 现代化运维面板、阿里云 CDN 与全站加速 DCDN、腾讯云 CDN、Cloudflare Custom SSL、Kubernetes TLS Secret、远程 SSH 主机（自动上传并执行 Nginx/Apache 热重载）、本地目录写入以及通用 Webhook 回调。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "云签盾如何保障云厂商 DNS 密钥与证书私钥的安全？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "云签盾采用企业级零信任安全架构：所有 DNS AccessKey、面板 API 密钥、SSH 私钥以及签发的证书私钥均使用 AES-256-GCM 算法进行高强度加密落盘存储；管理后台支持安全入口令牌拦截、OIDC + PKCE 单点登录、TOTP 2FA 双因素认证与 RBAC 角色权限隔离。"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased min-h-screen selection:bg-emerald-500/20 selection:text-emerald-700 dark:selection:text-emerald-300">
     <div id="root"></div>
+    <noscript>
+      <main style="max-width: 960px; margin: 40px auto; padding: 24px; font-family: system-ui, -apple-system, sans-serif; line-height: 1.7;">
+        <h1>云签盾 — 企业级全自动 SSL/TLS 证书生命周期管理与多云部署平台</h1>
+        <p>云签盾（YunQianDun）基于 RFC 8555 (ACME) 标准协议，提供从域名 DNS-01 权威验证、多 CA 机构证书申请签发、跨云跨面板一键自动部署，到到期前 30 天无感续期与 7x24 小时全网 HTTPS 探针巡检的一站式解决方案。</p>
+        <h2>云签盾解决的核心问题</h2>
+        <ul>
+          <li><strong>终结 90 天证书过期焦虑</strong>：自动在证书到期前 30 天触发无感续签，杜绝因人工遗忘导致的 HTTPS 告警与业务中断。</li>
+          <li><strong>打通多云与面板碎片化孤岛</strong>：一次签发，同步推送至宝塔面板、宝塔 Docker 网站、1Panel、阿里云 CDN/DCDN、腾讯云、Cloudflare、K8s Secret 与远程 SSH 服务器，自动执行 Nginx 平滑热重载。</li>
+          <li><strong>告别繁琐连线流程图</strong>：首创声明式 3 步向导任务模型，30 秒完成泛域名与多域名证书流水线配置。</li>
+          <li><strong>全网主动监控与防伪审计</strong>：内置全球多区域 TLS 探针矩阵与 CT 证书透明度日志监控，实时掌控每一张线上证书的健康状态。</li>
+        </ul>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

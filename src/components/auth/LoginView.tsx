@@ -1,9 +1,38 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Key, Lock, ArrowRight, AlertCircle, Smartphone, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Key, Lock, ArrowRight, AlertCircle, Smartphone, ArrowLeft, ShieldAlert, Home } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../api/client';
+
+/**
+ * Extract login entry token from current URL (/login?token=xxx, /login?t=xxx, /login?xxx, or /login/xxx)
+ */
+function extractUrlEntryToken(): string {
+  const pathname = window.location.pathname;
+  const pathMatch = pathname.match(/^\/login\/([^/]+)\/?$/);
+  if (pathMatch && pathMatch[1]) {
+    return decodeURIComponent(pathMatch[1]).trim();
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const byToken = params.get('token') || params.get('t');
+  if (byToken && byToken.trim()) {
+    return byToken.trim();
+  }
+
+  // Support bare query string like /login?yqd_sec_2026
+  const keys = Array.from(params.keys());
+  if (keys.length === 1 && params.get(keys[0]) === '') {
+    return keys[0].trim();
+  }
+
+  return '';
+}
 
 export const LoginView: React.FC = () => {
   const { loginLocal, loginSSO } = useAuth();
+  const [verifyingEntry, setVerifyingEntry] = useState(true);
+  const [entryAllowed, setEntryAllowed] = useState(false);
+
   const [showLocalLogin, setShowLocalLogin] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -12,6 +41,34 @@ export const LoginView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const candidate = extractUrlEntryToken();
+    if (!candidate) {
+      sessionStorage.removeItem('yqd_login_entry_token');
+      setEntryAllowed(false);
+      setVerifyingEntry(false);
+      return;
+    }
+
+    api.verifyLoginEntry(candidate)
+      .then((res) => {
+        if (res && res.valid) {
+          sessionStorage.setItem('yqd_login_entry_token', candidate);
+          setEntryAllowed(true);
+        } else {
+          sessionStorage.removeItem('yqd_login_entry_token');
+          setEntryAllowed(false);
+        }
+      })
+      .catch(() => {
+        sessionStorage.removeItem('yqd_login_entry_token');
+        setEntryAllowed(false);
+      })
+      .finally(() => {
+        setVerifyingEntry(false);
+      });
+  }, []);
 
   const handleLocalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +100,65 @@ export const LoginView: React.FC = () => {
     }
   };
 
+  if (verifyingEntry) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 font-medium">正在校验安全登录入口令牌...</p>
+      </div>
+    );
+  }
+
+  // Intercept /login when token is missing or invalid
+  if (!entryAllowed) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+        <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-rose-200/40 via-amber-100/30 to-transparent dark:from-rose-950/30 dark:via-slate-900/20 rounded-full blur-3xl pointer-events-none -top-24 -left-24"></div>
+
+        <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-rose-200/90 dark:border-rose-900/60 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 dark:shadow-black/40 space-y-5 relative z-10 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800/60 flex items-center justify-center mx-auto text-rose-600 dark:text-rose-400 shadow-sm">
+            <ShieldAlert className="w-9 h-9" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="inline-block text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+              HTTP 403 · 安全入口拦截
+            </span>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              安全登录入口校验失败
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              为防止恶意扫描与暴力破解攻击，<strong>云签盾</strong>已开启登录地址安全令牌保护，直接访问 <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-rose-600 dark:text-rose-400">/login</code> 已被系统安全策略阻断。
+            </p>
+          </div>
+
+          <div className="text-left p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/70 text-xs space-y-2 text-slate-600 dark:text-slate-300">
+            <div className="font-bold text-slate-800 dark:text-slate-200">管理员如何正确访问登录页？</div>
+            <p className="text-[11px] leading-relaxed">
+              1. 请使用包含安全令牌的完整地址访问：<br />
+              <code className="inline-block mt-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 break-all">
+                /login?token=配置文件中的LOGIN_TOKEN
+              </code>
+            </p>
+            <p className="text-[11px] leading-relaxed">
+              2. 您随时可在服务器配置文件 <code className="font-mono font-bold">.env</code> 中查看或修改 <code className="font-mono font-bold">LOGIN_TOKEN</code> 参数。
+            </p>
+          </div>
+
+          <div className="pt-1">
+            <a
+              href="/"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+            >
+              <Home className="w-4 h-4" />
+              <span>返回云签盾官网首页</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       {/* Light Background Ambient Mesh */}
@@ -55,8 +171,8 @@ export const LoginView: React.FC = () => {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/25 text-white">
             <ShieldCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">SSL-Mate (证书伴侣)</h1>
-          <p className="text-xs text-slate-500">自动化 SSL 证书生命周期管理平台</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">云签盾</h1>
+          <p className="text-xs text-slate-500">企业级全自动 SSL 证书生命周期管理平台</p>
         </div>
 
         {error && (
@@ -202,11 +318,21 @@ export const LoginView: React.FC = () => {
             </form>
           )}
         </div>
+
+        <div className="pt-2 border-t border-slate-100 text-center">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-600 transition-colors font-medium"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>返回云签盾官网首页</span>
+          </a>
+        </div>
       </div>
 
       {/* Footer copyright */}
       <div className="text-center text-[11px] text-slate-400 mt-6">
-        SSL-Mate (证书伴侣) · 企业级全自动证书生命周期管理平台
+        云签盾 · 企业级全自动 SSL 证书生命周期管理平台
       </div>
     </div>
   );

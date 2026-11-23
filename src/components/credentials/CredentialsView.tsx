@@ -802,7 +802,7 @@ export const CredentialsView: React.FC = () => {
                       className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs"
                     />
                     <p className="text-[11px] text-slate-400 mt-1">
-                      请在宝塔面板【面板设置】➔【API 接口】中开启并获取（<span className="text-amber-500 font-bold">务必将 SSL-Mate 服务器 IP 加入白名单</span>）
+                      请在宝塔面板【面板设置】➔【API 接口】中开启并获取（<span className="text-amber-500 font-bold">务必将云签盾服务器 IP 加入白名单</span>）
                     </p>
                   </div>
 

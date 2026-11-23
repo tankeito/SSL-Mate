@@ -53,11 +53,11 @@ export const OAuthCallback: React.FC = () => {
 
         {error && (
           <a
-            href="/login"
+            href="/"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors mt-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>返回登录页</span>
+            <span>返回云签盾首页</span>
           </a>
         )}
       </div>

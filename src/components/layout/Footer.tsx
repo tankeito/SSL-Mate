@@ -11,7 +11,7 @@ export const Footer: React.FC = () => {
             <ShieldCheck className="w-3.5 h-3.5" />
           </div>
           <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-            SSL-Mate (证书伴侣)
+            云签盾
           </span>
           <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold border border-emerald-200/80 dark:border-emerald-800/60">
             v1.2.0 Enterprise
@@ -35,7 +35,7 @@ export const Footer: React.FC = () => {
           </div>
           <span className="text-slate-300 dark:text-slate-700 hidden lg:inline">·</span>
           <span className="text-slate-400 dark:text-slate-500">
-            © {new Date().getFullYear()} SSL-Mate & AuthMate SSO
+            © {new Date().getFullYear()} 云签盾 & AuthMate SSO
           </span>
         </div>
       </div>

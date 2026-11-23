@@ -15,6 +15,7 @@ import { SettingsView } from './components/settings/SettingsView';
 import { TaskExecutionModal } from './components/tasks/TaskExecutionModal';
 import { LoginView } from './components/auth/LoginView';
 import { OAuthCallback } from './components/auth/OAuthCallback';
+import { LandingView } from './components/landing/LandingView';
 import { Footer } from './components/layout/Footer';
 import { CertTask } from './types';
 import { api } from './api/client';
@@ -29,7 +30,7 @@ export const App: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('sslmate_dark_mode');
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : false;
   });
 
   const handleSelectTab = (tab: NavTab) => {
@@ -56,22 +57,40 @@ export const App: React.FC = () => {
     }
   }, [darkMode]);
 
+  const currentPath = window.location.pathname;
+
   // Handle OAuth Callback route
-  if (window.location.pathname === '/oauth/callback') {
+  if (currentPath === '/oauth/callback') {
     return <OAuthCallback />;
   }
 
-  // Handle Login
+  const isLoginRoute = currentPath === '/login' || currentPath.startsWith('/login/');
+
+  // If unauthenticated and visiting the public homepage (/), render LandingView immediately for SEO & zero-latency LCP
+  if (!user && !loading && !isLoginRoute) {
+    return <LandingView darkMode={darkMode} setDarkMode={setDarkMode} />;
+  }
+
+  // Handle Auth Session Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
       </div>
     );
   }
 
-  if (!user) {
+  // Handle /login route
+  if (isLoginRoute) {
+    if (user) {
+      window.location.replace('/');
+      return null;
+    }
     return <LoginView />;
+  }
+
+  if (!user) {
+    return <LandingView darkMode={darkMode} setDarkMode={setDarkMode} />;
   }
 
   const handleOpenNewTask = () => {

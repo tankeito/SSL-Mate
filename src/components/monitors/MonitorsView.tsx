@@ -1403,7 +1403,7 @@ export const MonitorsView: React.FC = () => {
                           <th className="py-2.5 px-3">证书域名 (CN / SANs)</th>
                           <th className="py-2.5 px-3">签发 CA 机构</th>
                           <th className="py-2.5 px-3">有效期区间</th>
-                          <th className="py-2.5 px-3">SSL-Mate 鉴别</th>
+                          <th className="py-2.5 px-3">云签盾鉴别</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

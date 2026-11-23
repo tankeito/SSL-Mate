@@ -303,7 +303,7 @@ export class PanelDeployer {
         type: 'manual',
         certificate: certData.fullchainPem,
         privateKey: certData.privkeyPem,
-        description: '由 SSL-Mate 证书伴侣自动化签发并同步'
+        description: '由云签盾自动化签发并同步'
       })
     });
 

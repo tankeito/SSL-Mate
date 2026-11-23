@@ -129,7 +129,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
               <span>全天候自动巡检 · 告别复杂连线流程图</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">SSL-Mate 证书自动化控制台</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">云签盾 证书自动化控制台</h2>
             <p className="text-emerald-100 text-sm leading-relaxed">
               集中管理各大云平台与服务器的 SSL 证书，全自动完成 DNS-01 验证、申请签发、多目标部署与到期前 30 天自动续期。
             </p>
